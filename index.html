@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>情报终端 · Intelligence Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0e0f0c; --panel:#16170f; --panel2:#1c1d14;
+    --ink:#ece7d6; --muted:#8d8a78; --line:#2c2c20;
+    --amber:#e0aa3e; --amber-dim:#9a7a32; --green:#7fae6a; --red:#c9695a; --blue:#6f93b8;
+    --mono:'IBM Plex Mono',monospace; --sans:'IBM Plex Sans',sans-serif; --serif:'Fraunces',serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--bg); color:var(--ink); font-family:var(--sans);
+    font-size:15px; line-height:1.55; -webkit-font-smoothing:antialiased;
+    background-image:
+      radial-gradient(1200px 600px at 80% -10%, rgba(224,170,62,.07), transparent 60%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.025'/%3E%3C/svg%3E");
+  }
+  a{color:var(--amber)}
+  .wrap{max-width:1040px;margin:0 auto;padding:0 18px}
+
+  /* header */
+  header{border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20;
+    background:rgba(14,15,12,.92);backdrop-filter:blur(8px)}
+  .top{display:flex;align-items:baseline;justify-content:space-between;padding:16px 0 10px;gap:12px;flex-wrap:wrap}
+  .brand{font-family:var(--serif);font-weight:600;font-size:26px;letter-spacing:.3px}
+  .brand .dot{color:var(--amber)}
+  .brand small{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;display:block;margin-top:-2px}
+  .status{font-family:var(--mono);font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .status .pill{display:inline-flex;align-items:center;gap:6px}
+  .led{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
+  .led.off{background:var(--red);box-shadow:0 0 8px var(--red)}
+  .iconbtn{background:none;border:1px solid var(--line);color:var(--muted);font-family:var(--mono);
+    font-size:11px;padding:5px 9px;border-radius:6px;cursor:pointer;letter-spacing:.5px}
+  .iconbtn:hover{color:var(--ink);border-color:var(--amber-dim)}
+
+  nav{display:flex;gap:2px;padding-bottom:0}
+  nav button{background:none;border:none;color:var(--muted);font-family:var(--mono);font-size:12.5px;
+    letter-spacing:1px;text-transform:uppercase;padding:11px 16px;cursor:pointer;border-bottom:2px solid transparent}
+  nav button:hover{color:var(--ink)}
+  nav button.active{color:var(--amber);border-bottom-color:var(--amber)}
+
+  main{padding:26px 0 80px}
+  .view{display:none;animation:fade .4s ease}
+  .view.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  .sectionhead{display:flex;align-items:baseline;justify-content:space-between;margin:0 0 16px;flex-wrap:wrap;gap:8px}
+  .sectionhead h2{font-family:var(--serif);font-weight:600;font-size:21px}
+  .sectionhead .meta{font-family:var(--mono);font-size:11px;color:var(--muted)}
+
+  /* cards */
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin-bottom:12px}
+  .news-item{display:flex;gap:14px;align-items:flex-start}
+  .news-item .imp{font-family:var(--mono);font-size:10px;width:34px;flex:none;text-align:center;
+    border:1px solid var(--line);border-radius:5px;padding:3px 0;color:var(--amber)}
+  .news-item h3{font-size:16px;font-weight:600;margin-bottom:5px;line-height:1.35}
+  .news-item h3 a{color:var(--ink);text-decoration:none}
+  .news-item h3 a:hover{color:var(--amber)}
+  .news-item p{color:#c7c2b1;font-size:14px}
+  .tagrow{display:flex;gap:8px;margin-top:9px;font-family:var(--mono);font-size:10.5px;color:var(--muted);flex-wrap:wrap}
+  .chip{border:1px solid var(--line);padding:2px 7px;border-radius:4px}
+  .chip.ai{color:var(--blue);border-color:#33455a}
+  .chip.fin{color:var(--green);border-color:#3a4a31}
+
+  .filterbar{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+  .filterbar button{font-family:var(--mono);font-size:11px;background:var(--panel);border:1px solid var(--line);
+    color:var(--muted);padding:5px 11px;border-radius:6px;cursor:pointer}
+  .filterbar button.on{color:var(--bg);background:var(--amber);border-color:var(--amber)}
+
+  /* tables */
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th{font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);
+    text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);font-weight:500}
+  td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+  td.num{font-family:var(--mono);text-align:right}
+  tr:hover td{background:var(--panel2)}
+  .del{color:var(--red);cursor:pointer;font-family:var(--mono);font-size:11px;opacity:.6}
+  .del:hover{opacity:1}
+  .tablewrap{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow-x:auto;margin-bottom:14px}
+
+  /* stats */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:18px}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  .stat .k{font-family:var(--mono);font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+  .stat .v{font-family:var(--serif);font-size:25px;font-weight:600;margin-top:4px}
+
+  /* forms */
+  .addrow{display:grid;gap:8px;margin-bottom:14px;background:var(--panel2);border:1px solid var(--line);
+    border-radius:10px;padding:14px}
+  .addrow .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+  input,select,textarea{background:#0c0d0a;border:1px solid var(--line);color:var(--ink);font-family:var(--sans);
+    font-size:13.5px;padding:8px 10px;border-radius:6px;width:100%}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--amber-dim)}
+  textarea{resize:vertical;min-height:62px;font-family:var(--sans)}
+  label{font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:3px}
+  .btn{background:var(--amber);color:#1a1606;border:none;font-family:var(--mono);font-size:12px;font-weight:600;
+    letter-spacing:.5px;padding:9px 16px;border-radius:7px;cursor:pointer}
+  .btn:hover{background:#eab94d}
+  .btn.ghost{background:none;color:var(--muted);border:1px solid var(--line)}
+  .btn.ghost:hover{color:var(--ink)}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .savebar{display:flex;align-items:center;gap:12px;margin-top:6px}
+  .dirty{font-family:var(--mono);font-size:11px;color:var(--amber)}
+
+  .plan{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--amber-dim);
+    border-radius:8px;padding:14px 16px;margin-bottom:10px}
+  .plan .ph{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+  .plan h4{font-family:var(--serif);font-size:17px;font-weight:600}
+  .plan .pd{font-family:var(--mono);font-size:11px;color:var(--muted)}
+  .plan p{white-space:pre-wrap;margin-top:6px;color:#c7c2b1;font-size:14px}
+
+  .empty{color:var(--muted);font-family:var(--mono);font-size:12.5px;text-align:center;padding:40px 0;
+    border:1px dashed var(--line);border-radius:10px}
+
+  .bars{display:flex;flex-direction:column;gap:7px;margin-top:6px}
+  .bar{display:grid;grid-template-columns:130px 1fr 42px;align-items:center;gap:10px;font-size:13px}
+  .bar .name{font-family:var(--mono);font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bar .track{height:9px;background:#0c0d0a;border-radius:5px;overflow:hidden;border:1px solid var(--line)}
+  .bar .fill{height:100%;background:linear-gradient(90deg,var(--amber-dim),var(--amber))}
+  .bar .ct{font-family:var(--mono);font-size:11px;color:var(--ink);text-align:right}
+
+  .analysis{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin-bottom:18px}
+  .analysis h3{font-family:var(--serif);font-size:18px;margin-bottom:8px}
+  .analysis p{white-space:pre-wrap;color:#c7c2b1}
+  .signal{display:flex;gap:9px;margin-top:8px;font-size:14px}
+  .signal::before{content:"▸";color:var(--amber)}
+
+  /* setup gate */
+  .gate{position:fixed;inset:0;background:var(--bg);z-index:50;display:flex;align-items:center;justify-content:center;padding:20px}
+  .gate .box{max-width:440px;width:100%;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:30px}
+  .gate h1{font-family:var(--serif);font-size:27px;margin-bottom:6px}
+  .gate h1 .dot{color:var(--amber)}
+  .gate .sub{color:var(--muted);font-size:13.5px;margin-bottom:22px;line-height:1.6}
+  .gate .field{margin-bottom:14px}
+  .gate .hint{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-top:5px;line-height:1.5}
+  .gate .err{color:var(--red);font-family:var(--mono);font-size:12px;margin-top:12px;min-height:16px}
+  .secure{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-top:18px;padding-top:16px;border-top:1px solid var(--line);line-height:1.6}
+  .secure b{color:var(--green)}
+
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);
+    background:var(--panel2);border:1px solid var(--amber-dim);color:var(--ink);font-family:var(--mono);
+    font-size:12.5px;padding:11px 18px;border-radius:8px;z-index:60;transition:transform .3s ease;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+  .toast.err{border-color:var(--red)}
+</style>
+</head>
+<body>
+
+<!-- ============ SETUP GATE ============ -->
+<div class="gate" id="gate">
+  <div class="box">
+    <h1>情报终端<span class="dot">.</span></h1>
+    <div class="sub">连接你的私有数据仓库。凭据只保存在本机浏览器，永远不会写入网页代码或上传到别处。</div>
+    <div class="field">
+      <label>GitHub 用户名 / 组织 (owner)</label>
+      <input id="g_owner" placeholder="例如 your-name" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>私有仓库名 (repo)</label>
+      <input id="g_repo" placeholder="例如 my-databases" autocomplete="off">
+      <div class="hint">数据将读写该仓库的 investment/ 文件夹</div>
+    </div>
+    <div class="field">
+      <label>Fine-grained PAT</label>
+      <input id="g_token" type="password" placeholder="github_pat_..." autocomplete="off">
+      <div class="hint">权限只需该仓库的 Contents: Read &amp; Write</div>
+    </div>
+    <button class="btn" style="width:100%;margin-top:6px" onclick="saveSetup()">连接</button>
+    <div class="err" id="g_err"></div>
+    <div class="secure"><b>为什么这样安全:</b> 本站是纯静态页面，没有后端。你的 token 仅存于此设备的 localStorage，仅用于浏览器直连 GitHub API 读写你的私有数据。任何打开本站的其他人都看不到、也用不了你的 token。</div>
+  </div>
+</div>
+
+<!-- ============ APP ============ -->
+<header>
+  <div class="wrap">
+    <div class="top">
+      <div class="brand">情报终端<span class="dot">.</span><small>Intelligence Desk</small></div>
+      <div class="status">
+        <span class="pill"><span class="led" id="led"></span><span id="connlabel">未连接</span></span>
+        <span class="pill" id="syncinfo">—</span>
+        <button class="iconbtn" onclick="reloadAll()">刷新</button>
+        <button class="iconbtn" onclick="openSettings()">设置</button>
+      </div>
+    </div>
+    <nav>
+      <button class="active" data-tab="news" onclick="switchTab('news')">动态</button>
+      <button data-tab="invest" onclick="switchTab('invest')">投资</button>
+      <button data-tab="trends" onclick="switchTab('trends')">趋势</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- NEWS -->
+  <section class="view active" id="view-news">
+    <div class="sectionhead">
+      <h2>行业动态 · 金融 &amp; AI</h2>
+      <div class="meta" id="news-updated">—</div>
+    </div>
+    <div class="filterbar" id="news-filter">
+      <button class="on" data-c="all" onclick="setNewsFilter('all',this)">全部</button>
+      <button data-c="AI" onclick="setNewsFilter('AI',this)">AI</button>
+      <button data-c="金融" onclick="setNewsFilter('金融',this)">金融</button>
+      <button data-c="其他" onclick="setNewsFilter('其他',this)">其他</button>
+    </div>
+    <div id="news-list"></div>
+  </section>
+
+  <!-- INVEST -->
+  <section class="view" id="view-invest">
+    <div class="sectionhead">
+      <h2>个人投资 · 分析 / 计划 / 记录</h2>
+      <div class="meta" id="invest-updated">—</div>
+    </div>
+
+    <div class="stats" id="invest-stats"></div>
+
+    <!-- holdings -->
+    <div class="sectionhead"><h2 style="font-size:17px">持仓</h2></div>
+    <div class="addrow">
+      <div class="grid">
+        <div><label>名称</label><input id="h_name" placeholder="苹果"></div>
+        <div><label>代码</label><input id="h_ticker" placeholder="AAPL"></div>
+        <div><label>类型</label><select id="h_type"><option>股票</option><option>ETF</option><option>加密</option><option>基金</option><option>现金</option><option>其他</option></select></div>
+        <div><label>数量</label><input id="h_qty" type="number" step="any" placeholder="10"></div>
+        <div><label>成本价</label><input id="h_cost" type="number" step="any" placeholder="150"></div>
+        <div><label>现价(选填)</label><input id="h_price" type="number" step="any" placeholder="180"></div>
+        <div><label>币种</label><input id="h_cur" placeholder="USD" value="USD"></div>
+      </div>
+      <div><label>备注</label><input id="h_note" placeholder="长期持有 / 论点…"></div>
+      <button class="btn" style="justify-self:start" onclick="addHolding()">+ 添加持仓</button>
+    </div>
+    <div class="tablewrap"><table id="holdings-tbl"></table></div>
+
+    <!-- transactions -->
+    <div class="sectionhead"><h2 style="font-size:17px">交易记录</h2></div>
+    <div class="addrow">
+      <div class="grid">
+        <div><label>日期</label><input id="t_date" type="date"></div>
+        <div><label>方向</label><select id="t_action"><option value="买入">买入</option><option value="卖出">卖出</option></select></div>
+        <div><label>名称</label><input id="t_name" placeholder="苹果"></div>
+        <div><label>代码</label><input id="t_ticker" placeholder="AAPL"></div>
+        <div><label>数量</label><input id="t_qty" type="number" step="any"></div>
+        <div><label>价格</label><input id="t_price" type="number" step="any"></div>
+        <div><label>费用</label><input id="t_fee" type="number" step="any" placeholder="0"></div>
+      </div>
+      <div><label>备注</label><input id="t_note" placeholder="原因 / 触发条件…"></div>
+      <button class="btn" style="justify-self:start" onclick="addTxn()">+ 记一笔</button>
+    </div>
+    <div class="tablewrap"><table id="txn-tbl"></table></div>
+
+    <!-- plans -->
+    <div class="sectionhead"><h2 style="font-size:17px">计划 &amp; 复盘</h2></div>
+    <div class="addrow">
+      <div class="grid" style="grid-template-columns:160px 1fr">
+        <div><label>日期</label><input id="p_date" type="date"></div>
+        <div><label>标题</label><input id="p_title" placeholder="Q3 配置思路 / 减仓决策…"></div>
+      </div>
+      <div><label>内容</label><textarea id="p_body" placeholder="论点、目标价、仓位计划、风险、复盘…"></textarea></div>
+      <button class="btn" style="justify-self:start" onclick="addPlan()">+ 添加</button>
+    </div>
+    <div id="plans-list"></div>
+
+    <div class="savebar">
+      <button class="btn" id="savebtn" onclick="saveInvest()">保存到 GitHub</button>
+      <span class="dirty" id="dirty"></span>
+    </div>
+  </section>
+
+  <!-- TRENDS -->
+  <section class="view" id="view-trends">
+    <div class="sectionhead">
+      <h2>招聘信号 · 大厂岗位趋势</h2>
+      <div class="meta" id="trends-updated">—</div>
+    </div>
+    <div class="analysis" id="trends-analysis" style="display:none">
+      <h3>趋势研判</h3>
+      <p id="analysis-text"></p>
+      <div id="analysis-signals"></div>
+    </div>
+    <div id="trends-list"></div>
+    <div class="card" style="margin-top:16px;color:var(--muted);font-size:12.5px;line-height:1.7">
+      <b style="color:var(--ink)">读法提示:</b> 岗位数量是<i>方向性</i>信号而非精确预测。关注的是某类岗位<i>随时间的相对变化</i>和 JD 主题的迁移，而非绝对值。数据来自公司 ATS 公开接口(Greenhouse / Lever / Ashby)，每次同步追加一个快照。
+    </div>
+  </section>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============ 状态 ============ */
+let CFG = { owner:'', repo:'', token:'' };
+let DATA = { invest:null, news:null, jobs:null };
+let SHA  = { invest:null, news:null, jobs:null };
+let dirty = false;
+let newsFilter = 'all';
+const PREFIX = 'investment'; // 私有 repo 内的文件夹
+
+/* ============ 工具 ============ */
+const $ = id => document.getElementById(id);
+const esc = s => (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const today = () => new Date().toISOString().slice(0,10);
+const fmt = n => (n||n===0)?Number(n).toLocaleString(undefined,{maximumFractionDigits:2}):'';
+
+function toast(msg, isErr){
+  const t=$('toast'); t.textContent=msg; t.className='toast show'+(isErr?' err':'');
+  setTimeout(()=>t.className='toast'+(isErr?' err':''),3200);
+}
+
+function b64encode(str){
+  const bytes=new TextEncoder().encode(str); let bin='';
+  bytes.forEach(b=>bin+=String.fromCharCode(b)); return btoa(bin);
+}
+function b64decode(b64){
+  const bin=atob(b64.replace(/\s/g,''));
+  return new TextDecoder().decode(Uint8Array.from(bin,c=>c.charCodeAt(0)));
+}
+
+/* ============ GitHub API ============ */
+async function ghGet(file){
+  const url=`https://api.github.com/repos/${CFG.owner}/${CFG.repo}/contents/${PREFIX}/${file}`;
+  const r=await fetch(url,{headers:{Authorization:`Bearer ${CFG.token}`,Accept:'application/vnd.github+json'}});
+  if(r.status===404) return {data:null, sha:null};
+  if(r.status===401||r.status===403) throw new Error('AUTH');
+  if(!r.ok) throw new Error('GitHub '+r.status);
+  const j=await r.json();
+  return { data: JSON.parse(b64decode(j.content)), sha: j.sha };
+}
+async function ghPut(file,obj,sha,message){
+  const url=`https://api.github.com/repos/${CFG.owner}/${CFG.repo}/contents/${PREFIX}/${file}`;
+  const body={message, content:b64encode(JSON.stringify(obj,null,2))};
+  if(sha) body.sha=sha;
+  let r=await fetch(url,{method:'PUT',headers:{Authorization:`Bearer ${CFG.token}`,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify(body)});
+  if(r.status===409){ // sha 过期，重取后重试
+    const cur=await ghGet(file); body.sha=cur.sha;
+    r=await fetch(url,{method:'PUT',headers:{Authorization:`Bearer ${CFG.token}`,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify(body)});
+  }
+  if(!r.ok) throw new Error('GitHub '+r.status+': '+(await r.text()).slice(0,120));
+  return (await r.json()).content.sha;
+}
+
+/* ============ 设置 / 连接 ============ */
+function loadCfg(){
+  try{ const c=JSON.parse(localStorage.getItem('id_cfg')||'null'); if(c) CFG=c; }catch{}
+}
+function saveSetup(){
+  const owner=$('g_owner').value.trim(), repo=$('g_repo').value.trim(), token=$('g_token').value.trim();
+  if(!owner||!repo||!token){ $('g_err').textContent='请填写全部字段'; return; }
+  CFG={owner,repo,token};
+  localStorage.setItem('id_cfg',JSON.stringify(CFG));
+  $('g_err').textContent='连接中…';
+  $('gate').style.display='none';
+  boot();
+}
+function openSettings(){
+  $('g_owner').value=CFG.owner||''; $('g_repo').value=CFG.repo||''; $('g_token').value=CFG.token||'';
+  $('g_err').textContent=''; $('gate').style.display='flex';
+}
+function setConn(ok){
+  $('led').className='led'+(ok?'':' off');
+  $('connlabel').textContent= ok ? `${CFG.owner}/${CFG.repo}` : '连接失败';
+}
+
+/* ============ 加载 ============ */
+async function boot(){
+  setConn(false);
+  try{
+    const [inv,news,jobs]=await Promise.all([
+      ghGet('invest.json').catch(e=>{if(e.message==='AUTH')throw e;return {data:null,sha:null}}),
+      ghGet('news.json').catch(()=>({data:null,sha:null})),
+      ghGet('jobs.json').catch(()=>({data:null,sha:null})),
+    ]);
+    DATA.invest = inv.data || {updated_at:'',holdings:[],transactions:[],plans:[]};
+    SHA.invest  = inv.sha;
+    DATA.news   = news.data || {updated_at:'',items:[]};
+    SHA.news    = news.sha;
+    DATA.jobs   = jobs.data || {updated_at:'',snapshots:[],analysis:null};
+    SHA.jobs    = jobs.sha;
+    setConn(true);
+    $('syncinfo').textContent = '动态 '+ (DATA.news.updated_at? DATA.news.updated_at.slice(0,16).replace('T',' '):'—');
+    renderAll();
+  }catch(e){
+    if(e.message==='AUTH'){ toast('凭据无效或权限不足',true); setConn(false); openSettings(); $('g_err').textContent='认证失败，请检查 token 权限(需 Contents 读写)与仓库名'; }
+    else { toast('加载失败: '+e.message,true); setConn(false); }
+  }
+}
+async function reloadAll(){ if(!CFG.token){openSettings();return;} toast('刷新中…'); boot(); }
+
+/* ============ 渲染 ============ */
+function renderAll(){ renderNews(); renderInvest(); renderTrends(); }
+
+function switchTab(tab){
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
+  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='view-'+tab));
+}
+
+/* ---- 动态 ---- */
+function setNewsFilter(c,el){ newsFilter=c; document.querySelectorAll('#news-filter button').forEach(b=>b.classList.toggle('on',b===el)); renderNews(); }
+function renderNews(){
+  const n=DATA.news||{items:[]};
+  $('news-updated').textContent = n.updated_at? '更新于 '+n.updated_at.slice(0,16).replace('T',' '):'尚无数据';
+  const items=(n.items||[]).filter(i=>newsFilter==='all'||i.category===newsFilter);
+  if(!items.length){ $('news-list').innerHTML='<div class="empty">暂无动态 — 等待定时任务首次抓取，或在私有仓库手动运行 sync workflow</div>'; return; }
+  $('news-list').innerHTML=items.map(i=>{
+    const cls=i.category==='AI'?'ai':i.category==='金融'?'fin':'';
+    return `<div class="card news-item">
+      <div class="imp">${esc(i.importance||'')}</div>
+      <div style="flex:1">
+        <h3>${i.url?`<a href="${esc(i.url)}" target="_blank" rel="noopener">${esc(i.title)}</a>`:esc(i.title)}</h3>
+        <p>${esc(i.summary)}</p>
+        <div class="tagrow">
+          <span class="chip ${cls}">${esc(i.category||'其他')}</span>
+          ${i.source?`<span>${esc(i.source)}</span>`:''}
+          ${i.date?`<span>${esc(i.date)}</span>`:''}
+        </div>
+      </div></div>`;
+  }).join('');
+}
+
+/* ---- 投资 ---- */
+function markDirty(){ dirty=true; $('dirty').textContent='● 有未保存改动'; }
+function renderInvest(){
+  const d=DATA.invest;
+  $('invest-updated').textContent = d.updated_at? '保存于 '+d.updated_at.slice(0,16).replace('T',' '):'尚未保存';
+
+  // stats
+  let cost=0, mkt=0, haveMkt=false;
+  d.holdings.forEach(h=>{ const q=+h.quantity||0, c=+h.cost_basis||0, p=+h.price; cost+=q*c; if(p){haveMkt=true; mkt+=q*p;} else mkt+=q*c; });
+  const pl = haveMkt? mkt-cost : null;
+  const plPct = (haveMkt&&cost)? (pl/cost*100):null;
+  $('invest-stats').innerHTML=`
+    <div class="stat"><div class="k">持仓数</div><div class="v">${d.holdings.length}</div></div>
+    <div class="stat"><div class="k">总成本</div><div class="v" style="font-size:21px">${fmt(cost)}</div></div>
+    <div class="stat"><div class="k">估值${haveMkt?'':' (按成本)'}</div><div class="v" style="font-size:21px">${fmt(mkt)}</div></div>
+    <div class="stat"><div class="k">浮动盈亏</div><div class="v" style="font-size:21px;color:${pl==null?'var(--ink)':pl>=0?'var(--green)':'var(--red)'}">${pl==null?'—':(pl>=0?'+':'')+fmt(pl)+(plPct!=null?` (${plPct>=0?'+':''}${plPct.toFixed(1)}%)`:'')}</div></div>`;
+
+  // holdings table
+  const ht=$('holdings-tbl');
+  if(!d.holdings.length){ ht.innerHTML='<tr><td style="color:var(--muted);font-family:var(--mono);font-size:12px;border:none">暂无持仓</td></tr>'; }
+  else{
+    ht.innerHTML='<tr><th>名称</th><th>代码</th><th>类型</th><th>数量</th><th>成本</th><th>现价</th><th>盈亏</th><th>备注</th><th></th></tr>'+
+    d.holdings.map(h=>{
+      const q=+h.quantity||0,c=+h.cost_basis||0,p=+h.price;
+      const pl= p? (p-c)*q : null;
+      return `<tr>
+        <td>${esc(h.name)}</td><td style="font-family:var(--mono)">${esc(h.ticker)}</td><td>${esc(h.type)}</td>
+        <td class="num">${fmt(h.quantity)}</td><td class="num">${fmt(h.cost_basis)}</td><td class="num">${fmt(h.price)}</td>
+        <td class="num" style="color:${pl==null?'var(--muted)':pl>=0?'var(--green)':'var(--red)'}">${pl==null?'—':(pl>=0?'+':'')+fmt(pl)}</td>
+        <td style="color:var(--muted);max-width:180px">${esc(h.note)}</td>
+        <td><span class="del" onclick="delHolding('${h.id}')">删除</span></td></tr>`;
+    }).join('');
+  }
+
+  // txn table
+  const tt=$('txn-tbl');
+  if(!d.transactions.length){ tt.innerHTML='<tr><td style="color:var(--muted);font-family:var(--mono);font-size:12px;border:none">暂无交易</td></tr>'; }
+  else{
+    tt.innerHTML='<tr><th>日期</th><th>方向</th><th>名称</th><th>代码</th><th>数量</th><th>价格</th><th>费用</th><th>金额</th><th>备注</th><th></th></tr>'+
+    [...d.transactions].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(t=>{
+      const amt=(+t.quantity||0)*(+t.price||0);
+      return `<tr>
+        <td style="font-family:var(--mono);font-size:12px">${esc(t.date)}</td>
+        <td style="color:${t.action==='买入'?'var(--green)':'var(--red)'}">${esc(t.action)}</td>
+        <td>${esc(t.name)}</td><td style="font-family:var(--mono)">${esc(t.ticker)}</td>
+        <td class="num">${fmt(t.quantity)}</td><td class="num">${fmt(t.price)}</td><td class="num">${fmt(t.fee)}</td>
+        <td class="num">${fmt(amt)}</td>
+        <td style="color:var(--muted);max-width:160px">${esc(t.note)}</td>
+        <td><span class="del" onclick="delTxn('${t.id}')">删除</span></td></tr>`;
+    }).join('');
+  }
+
+  // plans
+  const plEl=$('plans-list');
+  if(!d.plans.length){ plEl.innerHTML='<div class="empty">暂无计划或复盘</div>'; }
+  else{
+    plEl.innerHTML=[...d.plans].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(p=>`
+      <div class="plan"><div class="ph"><h4>${esc(p.title)}</h4><span class="pd">${esc(p.date)} <span class="del" onclick="delPlan('${p.id}')">删除</span></span></div>
+      <p>${esc(p.body)}</p></div>`).join('');
+  }
+}
+function addHolding(){
+  const name=$('h_name').value.trim(); if(!name){toast('请填名称',true);return;}
+  DATA.invest.holdings.push({id:uid(),name,ticker:$('h_ticker').value.trim(),type:$('h_type').value,
+    quantity:$('h_qty').value,cost_basis:$('h_cost').value,price:$('h_price').value,currency:$('h_cur').value.trim(),note:$('h_note').value.trim()});
+  ['h_name','h_ticker','h_qty','h_cost','h_price','h_note'].forEach(i=>$(i).value='');
+  markDirty(); renderInvest();
+}
+function addTxn(){
+  const name=$('t_name').value.trim(); if(!name){toast('请填名称',true);return;}
+  DATA.invest.transactions.push({id:uid(),date:$('t_date').value||today(),action:$('t_action').value,
+    name,ticker:$('t_ticker').value.trim(),quantity:$('t_qty').value,price:$('t_price').value,fee:$('t_fee').value,note:$('t_note').value.trim()});
+  ['t_name','t_ticker','t_qty','t_price','t_fee','t_note'].forEach(i=>$(i).value='');
+  markDirty(); renderInvest();
+}
+function addPlan(){
+  const title=$('p_title').value.trim(); if(!title){toast('请填标题',true);return;}
+  DATA.invest.plans.push({id:uid(),date:$('p_date').value||today(),title,body:$('p_body').value.trim()});
+  ['p_title','p_body'].forEach(i=>$(i).value='');
+  markDirty(); renderInvest();
+}
+function delHolding(id){ DATA.invest.holdings=DATA.invest.holdings.filter(h=>h.id!==id); markDirty(); renderInvest(); }
+function delTxn(id){ DATA.invest.transactions=DATA.invest.transactions.filter(t=>t.id!==id); markDirty(); renderInvest(); }
+function delPlan(id){ DATA.invest.plans=DATA.invest.plans.filter(p=>p.id!==id); markDirty(); renderInvest(); }
+
+async function saveInvest(){
+  const btn=$('savebtn'); btn.disabled=true; btn.textContent='保存中…';
+  try{
+    DATA.invest.updated_at=new Date().toISOString();
+    SHA.invest = await ghPut('invest.json', DATA.invest, SHA.invest, 'chore: update investment data via web');
+    dirty=false; $('dirty').textContent='✓ 已保存';
+    setTimeout(()=>{if(!dirty)$('dirty').textContent='';},2500);
+    renderInvest(); toast('已同步到 GitHub');
+  }catch(e){ toast('保存失败: '+e.message,true); }
+  btn.disabled=false; btn.textContent='保存到 GitHub';
+}
+
+/* ---- 趋势 ---- */
+function renderTrends(){
+  const j=DATA.jobs||{snapshots:[]};
+  $('trends-updated').textContent = j.updated_at? '更新于 '+j.updated_at.slice(0,16).replace('T',' '):'尚无数据';
+
+  // analysis
+  if(j.analysis&&j.analysis.summary){
+    $('trends-analysis').style.display='block';
+    $('analysis-text').textContent=j.analysis.summary;
+    $('analysis-signals').innerHTML=(j.analysis.signals||[]).map(s=>`<div class="signal">${esc(s)}</div>`).join('');
+  } else $('trends-analysis').style.display='none';
+
+  const snaps=j.snapshots||[];
+  if(!snaps.length){ $('trends-list').innerHTML='<div class="empty">暂无招聘快照 — 在私有仓库的 config.json 配置要追踪的公司后运行 sync workflow</div>'; return; }
+
+  // 取每家公司最新快照
+  const latest={};
+  snaps.forEach(s=>{ if(!latest[s.company]||s.date>latest[s.company].date) latest[s.company]=s; });
+  const companies=Object.values(latest).sort((a,b)=>(b.total||0)-(a.total||0));
+
+  $('trends-list').innerHTML=companies.map(c=>{
+    const cats=c.by_category||{};
+    const max=Math.max(1,...Object.values(cats));
+    const bars=Object.entries(cats).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`
+      <div class="bar"><div class="name">${esc(k)}</div>
+      <div class="track"><div class="fill" style="width:${Math.round(v/max*100)}%"></div></div>
+      <div class="ct">${v}</div></div>`).join('');
+    // 与上一快照对比
+    const prev=snaps.filter(s=>s.company===c.company&&s.date<c.date).sort((a,b)=>b.date.localeCompare(a.date))[0];
+    let delta='';
+    if(prev){ const d=(c.total||0)-(prev.total||0); delta=`<span style="color:${d>0?'var(--green)':d<0?'var(--red)':'var(--muted)'};font-family:var(--mono);font-size:11px">${d>0?'▲+':d<0?'▼':''}${d} vs ${prev.date}</span>`; }
+    return `<div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
+        <h3 style="font-family:var(--serif);font-size:18px">${esc(c.company)}</h3>
+        <span style="font-family:var(--mono);font-size:12px;color:var(--muted)">${c.total||0} 个岗位 · ${esc(c.date)}</span>
+      </div>
+      <div style="margin-bottom:8px">${delta}</div>
+      <div class="bars">${bars}</div>
+      ${(c.sample_titles&&c.sample_titles.length)?`<div style="margin-top:10px;font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.7">样本: ${c.sample_titles.slice(0,5).map(esc).join(' · ')}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+/* ============ 启动 ============ */
+window.addEventListener('beforeunload',e=>{ if(dirty){e.preventDefault();e.returnValue='';} });
+$('t_date').value=today(); $('p_date').value=today();
+loadCfg();
+if(CFG.token){ $('gate').style.display='none'; boot(); }
+</script>
+</body>
+</html>
