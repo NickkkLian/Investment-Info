@@ -272,8 +272,8 @@
     <div id="plans-list"></div>
 
     <div class="savebar">
-      <button class="btn" id="savebtn" onclick="saveInvest()">保存到 GitHub</button>
-      <span class="dirty" id="dirty"></span>
+      <span class="dirty" id="dirty">自动保存已开启</span>
+      <button class="btn ghost" id="savebtn" onclick="commitInvest(true)">立即保存</button>
     </div>
   </section>
 
@@ -303,7 +303,11 @@
 let CFG = { owner:'', repo:'', token:'' };
 let DATA = { invest:null, news:null, jobs:null };
 let SHA  = { invest:null, news:null, jobs:null };
-let dirty = false;
+let dataVersion = 0;   // 每次本地改动 +1
+let savedVersion = 0;  // 已成功保存到的版本
+let saving = false;
+let saveTimer = null, retryTimer = null, refreshTimer = null;
+const isDirty = () => dataVersion !== savedVersion;
 let newsFilter = 'all';
 const PREFIX = 'investment'; // 私有 repo 内的文件夹
 
@@ -391,10 +395,25 @@ async function boot(){
     setConn(true);
     $('syncinfo').textContent = '动态 '+ (DATA.news.updated_at? DATA.news.updated_at.slice(0,16).replace('T',' '):'—');
     renderAll();
+    startAutoRefresh();
   }catch(e){
     if(e.message==='AUTH'){ toast('凭据无效或权限不足',true); setConn(false); openSettings(); $('g_err').textContent='认证失败，请检查 token 权限(需 Contents 读写)与仓库名'; }
     else { toast('加载失败: '+e.message,true); setConn(false); }
   }
+}
+// 后台每 5 分钟拉取 Actions 更新的动态/趋势；不碰 invest，避免覆盖未保存的本地编辑
+function startAutoRefresh(){ clearInterval(refreshTimer); refreshTimer=setInterval(refreshFeeds, 5*60*1000); }
+async function refreshFeeds(){
+  if(!CFG.token || document.hidden) return;
+  try{
+    const [news,jobs]=await Promise.all([
+      ghGet('news.json').catch(()=>null),
+      ghGet('jobs.json').catch(()=>null),
+    ]);
+    if(news && news.data){ DATA.news=news.data; SHA.news=news.sha; renderNews(); }
+    if(jobs && jobs.data){ DATA.jobs=jobs.data; SHA.jobs=jobs.sha; renderTrends(); }
+    $('syncinfo').textContent='动态 '+(DATA.news.updated_at?DATA.news.updated_at.slice(0,16).replace('T',' '):'—');
+  }catch{}
 }
 async function reloadAll(){ if(!CFG.token){openSettings();return;} toast('刷新中…'); boot(); }
 
@@ -430,7 +449,16 @@ function renderNews(){
 }
 
 /* ---- 投资 ---- */
-function markDirty(){ dirty=true; $('dirty').textContent='● 有未保存改动'; }
+function setSaveStatus(state, msg){
+  const el=$('dirty'); const t=new Date().toTimeString().slice(0,5);
+  if(state==='idle')         el.innerHTML='自动保存已开启';
+  else if(state==='pending') el.innerHTML='<span style="color:var(--amber)">● 待自动保存…</span>';
+  else if(state==='saving')  el.innerHTML='<span style="color:var(--muted)">⟳ 保存中…</span>';
+  else if(state==='saved')   el.innerHTML=`<span style="color:var(--green)">✓ 已自动保存 ${t}</span>`;
+  else if(state==='error')   el.innerHTML=`<span style="color:var(--red)">⚠ 保存失败，自动重试中（${esc(msg||'')}）</span>`;
+}
+function markDirty(){ dataVersion++; setSaveStatus('pending'); scheduleSave(); }
+function scheduleSave(){ clearTimeout(saveTimer); saveTimer=setTimeout(()=>commitInvest(false), 2000); }
 function renderInvest(){
   const d=DATA.invest;
   $('invest-updated').textContent = d.updated_at? '保存于 '+d.updated_at.slice(0,16).replace('T',' '):'尚未保存';
@@ -514,16 +542,25 @@ function delHolding(id){ DATA.invest.holdings=DATA.invest.holdings.filter(h=>h.i
 function delTxn(id){ DATA.invest.transactions=DATA.invest.transactions.filter(t=>t.id!==id); markDirty(); renderInvest(); }
 function delPlan(id){ DATA.invest.plans=DATA.invest.plans.filter(p=>p.id!==id); markDirty(); renderInvest(); }
 
-async function saveInvest(){
-  const btn=$('savebtn'); btn.disabled=true; btn.textContent='保存中…';
+async function commitInvest(manual){
+  if(!CFG.token){ if(manual) openSettings(); return; }
+  if(saving) return;                       // 已有保存在进行；完成后会复查
+  if(!manual && !isDirty()) return;
+  const v=dataVersion;                     // 记录本次要保存到的版本
+  saving=true; clearTimeout(saveTimer); clearTimeout(retryTimer);
+  setSaveStatus('saving'); $('savebtn').disabled=true;
   try{
     DATA.invest.updated_at=new Date().toISOString();
-    SHA.invest = await ghPut('invest.json', DATA.invest, SHA.invest, 'chore: update investment data via web');
-    dirty=false; $('dirty').textContent='✓ 已保存';
-    setTimeout(()=>{if(!dirty)$('dirty').textContent='';},2500);
-    renderInvest(); toast('已同步到 GitHub');
-  }catch(e){ toast('保存失败: '+e.message,true); }
-  btn.disabled=false; btn.textContent='保存到 GitHub';
+    SHA.invest = await ghPut('invest.json', DATA.invest, SHA.invest, 'chore: auto-save investment data');
+    savedVersion=v;
+    renderInvest();
+    if(isDirty()){ setSaveStatus('pending'); scheduleSave(); }  // 保存期间又改了，再存一次
+    else setSaveStatus('saved');
+  }catch(e){
+    setSaveStatus('error', e.message);
+    retryTimer=setTimeout(()=>commitInvest(false), 8000);       // 失败 8 秒后自动重试
+  }
+  saving=false; $('savebtn').disabled=false;
 }
 
 /* ---- 趋势 ---- */
@@ -570,7 +607,7 @@ function renderTrends(){
 }
 
 /* ============ 启动 ============ */
-window.addEventListener('beforeunload',e=>{ if(dirty){e.preventDefault();e.returnValue='';} });
+window.addEventListener('beforeunload',e=>{ if(isDirty()||saving){ commitInvest(false); e.preventDefault(); e.returnValue=''; } });
 $('t_date').value=today(); $('p_date').value=today();
 loadCfg();
 if(CFG.token){ $('gate').style.display='none'; boot(); }
