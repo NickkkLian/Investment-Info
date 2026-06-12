@@ -84,6 +84,9 @@
   tr:hover td{background:var(--panel2)}
   .del{color:var(--red);cursor:pointer;font-family:var(--mono);font-size:11px;opacity:.6}
   .del:hover{opacity:1}
+  .pubtog{cursor:pointer;color:var(--muted);font-family:var(--mono);font-size:14px;user-select:none;white-space:nowrap}
+  .pubtog:hover{color:var(--amber-dim)}
+  .pubtog.on{color:var(--amber)}
   .tablewrap{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow-x:auto;margin-bottom:14px}
 
   /* stats */
@@ -220,7 +223,10 @@
   <section class="view" id="view-invest">
     <div class="sectionhead">
       <h2>个人投资 · 分析 / 计划 / 记录</h2>
-      <div class="meta" id="invest-updated">—</div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="meta" id="invest-updated">—</div>
+        <button class="iconbtn" onclick="exportPublic()" title="把勾选了「公开展示」的条目导出为 invest.public.json">导出展示数据</button>
+      </div>
     </div>
 
     <div class="stats" id="invest-stats"></div>
@@ -478,11 +484,12 @@ function renderInvest(){
   const ht=$('holdings-tbl');
   if(!d.holdings.length){ ht.innerHTML='<tr><td style="color:var(--muted);font-family:var(--mono);font-size:12px;border:none">暂无持仓</td></tr>'; }
   else{
-    ht.innerHTML='<tr><th>名称</th><th>代码</th><th>类型</th><th>数量</th><th>成本</th><th>现价</th><th>盈亏</th><th>备注</th><th></th></tr>'+
+    ht.innerHTML='<tr><th>展示</th><th>名称</th><th>代码</th><th>类型</th><th>数量</th><th>成本</th><th>现价</th><th>盈亏</th><th>备注</th><th></th></tr>'+
     d.holdings.map(h=>{
       const q=+h.quantity||0,c=+h.cost_basis||0,p=+h.price;
       const pl= p? (p-c)*q : null;
       return `<tr>
+        <td><span class="pubtog ${h.public?'on':''}" title="${h.public?'对外展示中，点击取消':'点击设为对外展示'}" onclick="togglePublic('holding','${h.id}')">${h.public?'◉':'○'}</span></td>
         <td>${esc(h.name)}</td><td style="font-family:var(--mono)">${esc(h.ticker)}</td><td>${esc(h.type)}</td>
         <td class="num">${fmt(h.quantity)}</td><td class="num">${fmt(h.cost_basis)}</td><td class="num">${fmt(h.price)}</td>
         <td class="num" style="color:${pl==null?'var(--muted)':pl>=0?'var(--green)':'var(--red)'}">${pl==null?'—':(pl>=0?'+':'')+fmt(pl)}</td>
@@ -495,10 +502,11 @@ function renderInvest(){
   const tt=$('txn-tbl');
   if(!d.transactions.length){ tt.innerHTML='<tr><td style="color:var(--muted);font-family:var(--mono);font-size:12px;border:none">暂无交易</td></tr>'; }
   else{
-    tt.innerHTML='<tr><th>日期</th><th>方向</th><th>名称</th><th>代码</th><th>数量</th><th>价格</th><th>费用</th><th>金额</th><th>备注</th><th></th></tr>'+
+    tt.innerHTML='<tr><th>展示</th><th>日期</th><th>方向</th><th>名称</th><th>代码</th><th>数量</th><th>价格</th><th>费用</th><th>金额</th><th>备注</th><th></th></tr>'+
     [...d.transactions].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(t=>{
       const amt=(+t.quantity||0)*(+t.price||0);
       return `<tr>
+        <td><span class="pubtog ${t.public?'on':''}" title="${t.public?'对外展示中，点击取消':'点击设为对外展示'}" onclick="togglePublic('txn','${t.id}')">${t.public?'◉':'○'}</span></td>
         <td style="font-family:var(--mono);font-size:12px">${esc(t.date)}</td>
         <td style="color:${t.action==='买入'?'var(--green)':'var(--red)'}">${esc(t.action)}</td>
         <td>${esc(t.name)}</td><td style="font-family:var(--mono)">${esc(t.ticker)}</td>
@@ -514,33 +522,63 @@ function renderInvest(){
   if(!d.plans.length){ plEl.innerHTML='<div class="empty">暂无计划或复盘</div>'; }
   else{
     plEl.innerHTML=[...d.plans].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(p=>`
-      <div class="plan"><div class="ph"><h4>${esc(p.title)}</h4><span class="pd">${esc(p.date)} <span class="del" onclick="delPlan('${p.id}')">删除</span></span></div>
+      <div class="plan"><div class="ph"><h4>${esc(p.title)}</h4><span class="pd"><span class="pubtog ${p.public?'on':''}" title="${p.public?'对外展示中，点击取消':'点击设为对外展示'}" onclick="togglePublic('plan','${p.id}')">${p.public?'◉ 展示中':'○ 展示'}</span>　${esc(p.date)} <span class="del" onclick="delPlan('${p.id}')">删除</span></span></div>
       <p>${esc(p.body)}</p></div>`).join('');
   }
 }
 function addHolding(){
   const name=$('h_name').value.trim(); if(!name){toast('请填名称',true);return;}
   DATA.invest.holdings.push({id:uid(),name,ticker:$('h_ticker').value.trim(),type:$('h_type').value,
-    quantity:$('h_qty').value,cost_basis:$('h_cost').value,price:$('h_price').value,currency:$('h_cur').value.trim(),note:$('h_note').value.trim()});
+    quantity:$('h_qty').value,cost_basis:$('h_cost').value,price:$('h_price').value,currency:$('h_cur').value.trim(),note:$('h_note').value.trim(),public:false});
   ['h_name','h_ticker','h_qty','h_cost','h_price','h_note'].forEach(i=>$(i).value='');
   markDirty(); renderInvest();
 }
 function addTxn(){
   const name=$('t_name').value.trim(); if(!name){toast('请填名称',true);return;}
   DATA.invest.transactions.push({id:uid(),date:$('t_date').value||today(),action:$('t_action').value,
-    name,ticker:$('t_ticker').value.trim(),quantity:$('t_qty').value,price:$('t_price').value,fee:$('t_fee').value,note:$('t_note').value.trim()});
+    name,ticker:$('t_ticker').value.trim(),quantity:$('t_qty').value,price:$('t_price').value,fee:$('t_fee').value,note:$('t_note').value.trim(),public:false});
   ['t_name','t_ticker','t_qty','t_price','t_fee','t_note'].forEach(i=>$(i).value='');
   markDirty(); renderInvest();
 }
 function addPlan(){
   const title=$('p_title').value.trim(); if(!title){toast('请填标题',true);return;}
-  DATA.invest.plans.push({id:uid(),date:$('p_date').value||today(),title,body:$('p_body').value.trim()});
+  DATA.invest.plans.push({id:uid(),date:$('p_date').value||today(),title,body:$('p_body').value.trim(),public:false});
   ['p_title','p_body'].forEach(i=>$(i).value='');
   markDirty(); renderInvest();
 }
 function delHolding(id){ DATA.invest.holdings=DATA.invest.holdings.filter(h=>h.id!==id); markDirty(); renderInvest(); }
 function delTxn(id){ DATA.invest.transactions=DATA.invest.transactions.filter(t=>t.id!==id); markDirty(); renderInvest(); }
 function delPlan(id){ DATA.invest.plans=DATA.invest.plans.filter(p=>p.id!==id); markDirty(); renderInvest(); }
+
+/* ---- 公开展示标记 & 导出 ---- */
+const DB_ID = 'invest';        // 本库唯一标识，固定不变；导出文件名 invest.public.json
+const DB_TITLE = '个人投资';    // 本库展示名
+function togglePublic(kind,id){
+  const arr = kind==='holding'?DATA.invest.holdings : kind==='txn'?DATA.invest.transactions : DATA.invest.plans;
+  const it = arr.find(x=>x.id===id); if(!it) return;
+  it.public = !it.public;
+  markDirty(); renderInvest();   // 标记随条目一起自动保存
+}
+function exportPublic(){
+  if(!DATA.invest){ toast('数据未加载',true); return; }
+  const d=DATA.invest, sections=[];
+  // 仅含对外内容；剔除数量/成本/价格/费用(权重金额) 与 note(私人备注)
+  const H = d.holdings.filter(x=>x.public).map(h=>({ id:h.id, name:h.name||'', summary:'', category:h.type||'', content:'', tags:h.ticker?[h.ticker]:[], updatedAt:'' }));
+  if(H.length) sections.push({ type:'holdings', label:'持仓', items:H });
+  const T = d.transactions.filter(x=>x.public).map(t=>({ id:t.id, name:`${t.action||''} ${t.name||''}`.trim(), summary:'', category:t.action||'', content:'', tags:t.ticker?[t.ticker]:[], updatedAt:t.date||'' }));
+  if(T.length) sections.push({ type:'transactions', label:'交易记录', items:T });
+  const P = d.plans.filter(x=>x.public).map(p=>({ id:p.id, name:p.title||'', summary:'', category:p.status||'', content:p.body||'', tags:[], updatedAt:p.date||'' }));
+  if(P.length) sections.push({ type:'plans', label:'计划与复盘', items:P });
+
+  if(!sections.length){ toast('未勾选任何「公开展示」条目',true); return; }
+  const out = { dbId:DB_ID, title:DB_TITLE, generatedAt:new Date().toISOString(), sections };
+  const blob=new Blob([JSON.stringify(out,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=`${DB_ID}.public.json`; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  const n=sections.reduce((s,x)=>s+x.items.length,0);
+  toast(`已导出 ${n} 条 → ${DB_ID}.public.json`);
+}
 
 async function commitInvest(manual){
   if(!CFG.token){ if(manual) openSettings(); return; }
