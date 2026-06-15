@@ -364,6 +364,8 @@ async function ghPut(file,obj,sha,message){
 /* ============ 设置 / 连接 ============ */
 function loadCfg(){
   try{ const c=JSON.parse(localStorage.getItem('id_cfg')||'null'); if(c) CFG=c; }catch{}
+  /* [hub-portal] 令牌为空时从共享配置 pha-config 读 owner+token（附加，安全合并，不覆盖已填，不改 repo/path） */
+  try{var _pha=JSON.parse(localStorage.getItem('pha-config')||'null');if(_pha&&_pha.token&&!CFG.token){CFG.owner=CFG.owner||_pha.owner;CFG.token=_pha.token;}}catch(e){}
 }
 function saveSetup(){
   const owner=$('g_owner').value.trim(), repo=$('g_repo').value.trim(), token=$('g_token').value.trim();
