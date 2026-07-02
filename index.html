@@ -220,6 +220,7 @@
       <button class="active" data-tab="news" onclick="switchTab('news')" data-i18n="nav_news">动态</button>
       <button data-tab="invest" onclick="switchTab('invest')" data-i18n="nav_invest">投资</button>
       <button data-tab="ibkr" onclick="switchTab('ibkr')">IBKR</button>
+      <button data-tab="mail" onclick="switchTab('mail')" data-i18n="nav_mail">邮件</button>
       <button data-tab="books" onclick="switchTab('books')" data-i18n="nav_books">书库</button>
       <button data-tab="trends" onclick="switchTab('trends')" data-i18n="nav_trends">趋势</button>
     </nav>
@@ -334,6 +335,27 @@
     </div>
   </section>
 
+  <!-- MAIL -->
+  <section class="view" id="view-mail">
+    <div class="sectionhead">
+      <h2 data-i18n="mailHead">邮件分类 · Gmail 自动整理</h2>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="meta" id="mail-updated">—</div>
+        <button class="iconbtn" id="mailTog" onclick="toggleMailFetch()" data-i18n-title="mailTogT" title="开/关每日自动分类（GitHub Actions 每天早上跑一次：给 Gmail 新邮件打 AI/xx 标签并生成此摘要）">分类: —</button>
+      </div>
+    </div>
+    <div class="card" id="mail-setup" style="display:none;color:var(--muted);font-size:13px;line-height:1.8">
+      <b style="color:var(--ink)" data-i18n="mailSetupT">还没配置 —— 三步开通（一次性，约 5 分钟）：</b>
+      <span data-i18n-html="mailSetupB">
+      ① Google 账号 → 安全 → 开启两步验证 → 搜「应用专用密码 App passwords」→ 生成一个（16 位）。<br>
+      ② GitHub 打开你的 <b>Database</b> 仓库 → Settings → Secrets and variables → Actions → New repository secret，添加两条：<code>GMAIL_USER</code>=你的 Gmail 地址、<code>GMAIL_APP_PASSWORD</code>=刚才的 16 位密码。<br>
+      ③ Database 仓库 → Actions → 左侧「Mail Classify」→ Run workflow 跑第一次。之后每天早上自动跑。</span>
+    </div>
+    <div class="stats" id="mail-stats"></div>
+    <div class="filterbar" id="mail-filter"></div>
+    <div id="mail-list"></div>
+  </section>
+
   <!-- BOOKS -->
   <section class="view" id="view-books">
     <div class="sectionhead">
@@ -400,8 +422,8 @@
 <script>
 /* ============ 状态 ============ */
 let CFG = { owner:'', repo:'', token:'' };
-let DATA = { invest:null, news:null, jobs:null, ibkr:null, books:null, config:null };
-let SHA  = { invest:null, news:null, jobs:null, ibkr:null, books:null, config:null };
+let DATA = { invest:null, news:null, jobs:null, ibkr:null, books:null, config:null, mail:null, mailconf:null };
+let SHA  = { invest:null, news:null, jobs:null, ibkr:null, books:null, config:null, mail:null, mailconf:null };
 let dataVersion = 0;   // 每次本地改动 +1
 let savedVersion = 0;  // 已成功保存到的版本
 let saving = false;
@@ -465,6 +487,11 @@ const I18N = {
   ph_ptitle:{zh:'Q3 配置思路 / 减仓决策…',en:'Q3 allocation / trim decision…'},
   ph_pbody:{zh:'论点、目标价、仓位计划、风险、复盘…',en:'Thesis, target price, sizing, risks, review…'},
   nav_books:{zh:'书库',en:'Books'},
+  nav_mail:{zh:'邮件',en:'Mail'},
+  mailHead:{zh:'邮件分类 · Gmail 自动整理',en:'Mail · Auto-classified Gmail'},
+  mailTogT:{zh:'开/关每日自动分类（GitHub Actions 每天早上跑一次：给 Gmail 新邮件打 AI/xx 标签并生成此摘要）',en:'Toggle daily auto-classification (GitHub Actions runs each morning: labels new Gmail as AI/xx and builds this digest)'},
+  mailSetupT:{zh:'还没配置 —— 三步开通（一次性，约 5 分钟）：',en:'Not set up yet — three one-time steps (~5 min):'},
+  mailSetupB:{zh:'① Google 账号 → 安全 → 开启两步验证 → 搜「应用专用密码 App passwords」→ 生成一个（16 位）。<br>② GitHub 打开你的 <b>Database</b> 仓库 → Settings → Secrets and variables → Actions → New repository secret，添加两条：<code>GMAIL_USER</code>=你的 Gmail 地址、<code>GMAIL_APP_PASSWORD</code>=刚才的 16 位密码。<br>③ Database 仓库 → Actions → 左侧「Mail Classify」→ Run workflow 跑第一次。之后每天早上自动跑。',en:'① Google Account → Security → turn on 2-Step Verification → search “App passwords” → create one (16 chars).<br>② In your <b>Database</b> repo on GitHub → Settings → Secrets and variables → Actions → New repository secret: add <code>GMAIL_USER</code> = your Gmail address and <code>GMAIL_APP_PASSWORD</code> = that 16-char password.<br>③ Database repo → Actions → “Mail Classify” → Run workflow once. It then runs every morning automatically.'},
   fetchTogT:{zh:'开/关定时抓取（GitHub Actions 每周一、四自动抓取动态与招聘趋势；关闭后定时任务直接跳过，不消耗 API）',en:'Toggle scheduled fetching (GitHub Actions pulls news & hiring trends Mon & Thu; when off, the job skips itself and uses no API)'},
   ibkrHead:{zh:'IBKR 组合 · 持仓 / 交易 / 盈亏',en:'IBKR Portfolio · Positions / Trades / P&L'},
   ibkrNavChart:{zh:'净值曲线',en:'NAV curve'},
@@ -533,6 +560,28 @@ function b64decode(b64){
 }
 
 /* ============ GitHub API ============ */
+// 仓库任意路径读写（不带 investment/ 前缀；邮件模块的 mail/ 用这组）
+async function ghGetPath(path){
+  const url=`https://api.github.com/repos/${CFG.owner}/${CFG.repo}/contents/${path}`;
+  const r=await fetch(url,{headers:{Authorization:`Bearer ${CFG.token}`,Accept:'application/vnd.github+json'}});
+  if(r.status===404) return {data:null, sha:null};
+  if(r.status===401||r.status===403) throw new Error('AUTH');
+  if(!r.ok) throw new Error('GitHub '+r.status);
+  const j=await r.json();
+  return { data: JSON.parse(b64decode(j.content)), sha: j.sha };
+}
+async function ghPutPath(path,obj,sha,message){
+  const url=`https://api.github.com/repos/${CFG.owner}/${CFG.repo}/contents/${path}`;
+  const body={message, content:b64encode(JSON.stringify(obj,null,2))};
+  if(sha) body.sha=sha;
+  let r=await fetch(url,{method:'PUT',headers:{Authorization:`Bearer ${CFG.token}`,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify(body)});
+  if(r.status===409){
+    const cur=await ghGetPath(path); body.sha=cur.sha;
+    r=await fetch(url,{method:'PUT',headers:{Authorization:`Bearer ${CFG.token}`,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify(body)});
+  }
+  if(!r.ok) throw new Error('GitHub '+r.status+': '+(await r.text()).slice(0,120));
+  return (await r.json()).content.sha;
+}
 async function ghGet(file){
   const url=`https://api.github.com/repos/${CFG.owner}/${CFG.repo}/contents/${PREFIX}/${file}`;
   const r=await fetch(url,{headers:{Authorization:`Bearer ${CFG.token}`,Accept:'application/vnd.github+json'}});
@@ -583,13 +632,15 @@ function setConn(ok){
 async function boot(){
   setConn(false);
   try{
-    const [inv,news,jobs,ibkr,books,conf]=await Promise.all([
+    const [inv,news,jobs,ibkr,books,conf,mailD,mailC]=await Promise.all([
       ghGet('invest.json').catch(e=>{if(e.message==='AUTH')throw e;return {data:null,sha:null}}),
       ghGet('news.json').catch(()=>({data:null,sha:null})),
       ghGet('jobs.json').catch(()=>({data:null,sha:null})),
       ghGet('ibkr.json').catch(()=>({data:null,sha:null})),
       ghGet('books.json').catch(()=>({data:null,sha:null})),
       ghGet('config.json').catch(()=>({data:null,sha:null})),
+      ghGetPath('mail/mail.json').catch(()=>({data:null,sha:null})),
+      ghGetPath('mail/config.json').catch(()=>({data:null,sha:null})),
     ]);
     DATA.invest = inv.data || {updated_at:'',holdings:[],transactions:[],plans:[]};
     SHA.invest  = inv.sha;
@@ -603,6 +654,10 @@ async function boot(){
     SHA.books   = books.sha;
     DATA.config = conf.data;   // null = 仓库里还没有 config.json（开关不可用）
     SHA.config  = conf.sha;
+    DATA.mail     = mailD.data;   // null = 邮件分类还没跑过第一次
+    SHA.mail      = mailD.sha;
+    DATA.mailconf = mailC.data;   // null = mail/config.json 尚不存在（未部署数据侧）
+    SHA.mailconf  = mailC.sha;
     setConn(true);
     $('syncinfo').textContent = T('动态 ','News ')+ (DATA.news.updated_at? DATA.news.updated_at.slice(0,16).replace('T',' '):'—');
     renderAll();
@@ -629,7 +684,7 @@ async function refreshFeeds(){
 async function reloadAll(){ if(!CFG.token){openSettings();return;} toast(T('刷新中…','Refreshing…')); boot(); }
 
 /* ============ 渲染 ============ */
-function renderAll(){ renderNews(); renderInvest(); renderTrends(); renderFetchTog(); renderIBKR(); renderBooks(); renderCompendium(); }
+function renderAll(){ renderNews(); renderInvest(); renderTrends(); renderFetchTog(); renderIBKR(); renderBooks(); renderCompendium(); renderMail(); }
 
 function switchTab(tab){
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
@@ -843,6 +898,77 @@ async function toggleFetch(){
     DATA.config.fetch_enabled = !next; renderFetchTog();
     toast(T('切换失败: ','Toggle failed: ')+e.message, true);
   }
+}
+
+/* ---- 邮件分类（读 mail/mail.json 摘要；开关写 mail/config.json 的 enabled） ---- */
+let mailFilter='all';
+function toggleMailFetch(){
+  if(!DATA.mailconf){ toast(T('仓库里还没有 mail/config.json（数据侧未部署）','No mail/config.json in the repo yet'),true); return; }
+  const next=!(DATA.mailconf.enabled!==false);
+  DATA.mailconf.enabled=next; renderMail();
+  ghPutPath('mail/config.json', DATA.mailconf, SHA.mailconf, `mail: classify ${next?'ON':'OFF'}`)
+    .then(sha=>{ SHA.mailconf=sha; toast(next?T('已开启每日自动分类','Daily classification ON'):T('已关闭（定时任务将直接跳过）','OFF — the scheduled job will skip itself')); })
+    .catch(e=>{ DATA.mailconf.enabled=!next; renderMail(); toast(T('切换失败: ','Toggle failed: ')+e.message,true); });
+}
+function setMailFilter(c,el){ mailFilter=c; document.querySelectorAll('#mail-filter button').forEach(b=>b.classList.toggle('on',b===el)); renderMailList(); }
+function mailCatLabel(key){
+  const cats=(DATA.mailconf&&DATA.mailconf.categories)||[];
+  const c=cats.find(x=>x.key===key);
+  return c? c.label : key;
+}
+function renderMail(){
+  if(!$('mail-stats')) return;
+  // 开关
+  const b=$('mailTog');
+  if(!DATA.mailconf){ b.textContent=T('分类: —','Classify: —'); b.style.color=''; }
+  else{
+    const on=DATA.mailconf.enabled!==false;
+    b.textContent=on?T('⏻ 分类: 开','⏻ Classify: ON'):T('⏻ 分类: 关','⏻ Classify: OFF');
+    b.style.color=on?'var(--green)':'var(--red)';
+  }
+  // 未配置提示
+  $('mail-setup').style.display = DATA.mail? 'none':'block';
+  const m=DATA.mail||{items:[]};
+  $('mail-updated').textContent = m.updated_at? T('更新于 ','Updated ')+m.updated_at.slice(0,16).replace('T',' '):T('尚未运行','Not run yet');
+  const items=m.items||[];
+  // stats
+  const dayMs=864e5, now=Date.now();
+  const today=items.filter(i=>now-new Date(i.date).getTime()<dayMs).length;
+  const week=items.filter(i=>now-new Date(i.date).getTime()<7*dayMs).length;
+  const action=items.filter(i=>i.action).length;
+  $('mail-stats').innerHTML= items.length? `
+    <div class="stat"><div class="k">${T('24 小时','Last 24h')}</div><div class="v">${today}</div></div>
+    <div class="stat"><div class="k">${T('近 7 天','Last 7d')}</div><div class="v">${week}</div></div>
+    <div class="stat"><div class="k">${T('⚡ 待办','⚡ Action')}</div><div class="v" style="color:${action?'var(--amber)':'var(--ink)'}">${action}</div></div>
+    <div class="stat"><div class="k">${T('已分类','Classified')}</div><div class="v">${items.length}</div></div>`:'';
+  // filter chips（按出现的类别动态生成）
+  const counts={};
+  items.forEach(i=>{ counts[i.category]=(counts[i.category]||0)+1; });
+  const chips=[`<button class="${mailFilter==='all'?'on':''}" onclick="setMailFilter('all',this)">${T('全部','All')} ${items.length}</button>`,
+    `<button class="${mailFilter==='__action'?'on':''}" onclick="setMailFilter('__action',this)">⚡ ${T('待办','Action')} ${action}</button>`]
+    .concat(Object.keys(counts).sort((a,b)=>counts[b]-counts[a]).map(k=>
+      `<button class="${mailFilter===k?'on':''}" onclick="setMailFilter('${k}',this)">${esc(mailCatLabel(k))} ${counts[k]}</button>`));
+  $('mail-filter').innerHTML= items.length? chips.join(''):'';
+  renderMailList();
+}
+function renderMailList(){
+  const m=DATA.mail||{items:[]};
+  let items=m.items||[];
+  if(mailFilter==='__action') items=items.filter(i=>i.action);
+  else if(mailFilter!=='all') items=items.filter(i=>i.category===mailFilter);
+  if(!items.length){ $('mail-list').innerHTML= (m.items||[]).length? `<div class="empty">${T('此类别暂无邮件','No mail in this category')}</div>`:''; return; }
+  $('mail-list').innerHTML=items.slice(0,120).map(i=>{
+    const gurl=i.msgid?`https://mail.google.com/mail/u/0/#search/rfc822msgid:${encodeURIComponent(i.msgid)}`:'https://mail.google.com';
+    return `<div class="card" style="padding:12px 16px">
+      <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">
+        ${i.action?'<span title="'+T('需要处理','Action needed')+'">⚡</span>':''}
+        <a href="${gurl}" target="_blank" rel="noopener" style="color:var(--ink);text-decoration:none;font-weight:600;font-size:14.5px">${esc(i.subject)}</a>
+        <span class="chip" style="font-family:var(--mono);font-size:10px">${esc(mailCatLabel(i.category))}</span>
+      </div>
+      <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:4px">
+        ${esc(i.from)} · ${esc((i.date||'').slice(0,16).replace('T',' '))}${i.reason?` · ${esc(i.reason)}`:''}
+      </div></div>`;
+  }).join('');
 }
 
 /* ============ IBKR 组合追踪 ============ */
