@@ -349,7 +349,7 @@
       <span data-i18n-html="mailSetupB">
       ① Google 账号 → 安全 → 开启两步验证 → 搜「应用专用密码 App passwords」→ 生成一个（16 位）。<br>
       ② GitHub 打开你的 <b>Database</b> 仓库 → Settings → Secrets and variables → Actions → New repository secret，添加两条：<code>GMAIL_USER</code>=你的 Gmail 地址、<code>GMAIL_APP_PASSWORD</code>=刚才的 16 位密码。<br>
-      ③ Database 仓库 → Actions → 左侧「Mail Classify」→ Run workflow 跑第一次。之后每天早上自动跑。</span>
+      ③ Database 仓库 → Actions → 左侧「Mail Classify」→ Run workflow：想把<b>现有收件箱</b>一次整理完，就在 backfill_days 填天数（如 365）；留空则只处理最近 7 天。之后每天早上自动跑新邮件。</span>
     </div>
     <div class="stats" id="mail-stats"></div>
     <div class="filterbar" id="mail-filter"></div>
@@ -491,7 +491,7 @@ const I18N = {
   mailHead:{zh:'邮件分类 · Gmail 自动整理',en:'Mail · Auto-classified Gmail'},
   mailTogT:{zh:'开/关每日自动分类（GitHub Actions 每天早上跑一次：给 Gmail 新邮件打 AI/xx 标签并生成此摘要）',en:'Toggle daily auto-classification (GitHub Actions runs each morning: labels new Gmail as AI/xx and builds this digest)'},
   mailSetupT:{zh:'还没配置 —— 三步开通（一次性，约 5 分钟）：',en:'Not set up yet — three one-time steps (~5 min):'},
-  mailSetupB:{zh:'① Google 账号 → 安全 → 开启两步验证 → 搜「应用专用密码 App passwords」→ 生成一个（16 位）。<br>② GitHub 打开你的 <b>Database</b> 仓库 → Settings → Secrets and variables → Actions → New repository secret，添加两条：<code>GMAIL_USER</code>=你的 Gmail 地址、<code>GMAIL_APP_PASSWORD</code>=刚才的 16 位密码。<br>③ Database 仓库 → Actions → 左侧「Mail Classify」→ Run workflow 跑第一次。之后每天早上自动跑。',en:'① Google Account → Security → turn on 2-Step Verification → search “App passwords” → create one (16 chars).<br>② In your <b>Database</b> repo on GitHub → Settings → Secrets and variables → Actions → New repository secret: add <code>GMAIL_USER</code> = your Gmail address and <code>GMAIL_APP_PASSWORD</code> = that 16-char password.<br>③ Database repo → Actions → “Mail Classify” → Run workflow once. It then runs every morning automatically.'},
+  mailSetupB:{zh:'① Google 账号 → 安全 → 开启两步验证 → 搜「应用专用密码 App passwords」→ 生成一个（16 位）。<br>② GitHub 打开你的 <b>Database</b> 仓库 → Settings → Secrets and variables → Actions → New repository secret，添加两条：<code>GMAIL_USER</code>=你的 Gmail 地址、<code>GMAIL_APP_PASSWORD</code>=刚才的 16 位密码。<br>③ Database 仓库 → Actions → 左侧「Mail Classify」→ Run workflow：想把<b>现有收件箱</b>一次整理完，就在 backfill_days 填天数（如 365）；留空则只处理最近 7 天。之后每天早上自动跑新邮件。',en:'① Google Account → Security → turn on 2-Step Verification → search “App passwords” → create one (16 chars).<br>② In your <b>Database</b> repo on GitHub → Settings → Secrets and variables → Actions → New repository secret: add <code>GMAIL_USER</code> = your Gmail address and <code>GMAIL_APP_PASSWORD</code> = that 16-char password.<br>③ Database repo → Actions → “Mail Classify” → Run workflow: to organize your <b>existing inbox</b> in one go, set backfill_days (e.g. 365); leave empty for just the last 7 days. New mail is then handled automatically every morning.'},
   fetchTogT:{zh:'开/关定时抓取（GitHub Actions 每周一、四自动抓取动态与招聘趋势；关闭后定时任务直接跳过，不消耗 API）',en:'Toggle scheduled fetching (GitHub Actions pulls news & hiring trends Mon & Thu; when off, the job skips itself and uses no API)'},
   ibkrHead:{zh:'IBKR 组合 · 持仓 / 交易 / 盈亏',en:'IBKR Portfolio · Positions / Trades / P&L'},
   ibkrNavChart:{zh:'净值曲线',en:'NAV curve'},
