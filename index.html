@@ -153,6 +153,27 @@
     font-size:12.5px;padding:11px 18px;border-radius:8px;z-index:60;transition:transform .3s ease;box-shadow:0 8px 24px rgba(0,0,0,.5)}
   .toast.show{transform:translateX(-50%) translateY(0)}
   .toast.err{border-color:var(--red)}
+
+  /* IBKR charts */
+  .charts2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+  @media(max-width:720px){.charts2{grid-template-columns:1fr}}
+  .charthead{font-family:var(--mono);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px}
+  .charts2 canvas{width:100%;height:190px;display:block}
+
+  /* Books / compendium */
+  .bookrow{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);
+    border-radius:10px;padding:12px 16px;margin-bottom:8px;flex-wrap:wrap}
+  .bookrow .bt{font-family:var(--serif);font-size:16.5px;font-weight:600}
+  .bookrow .ba{color:var(--muted);font-size:12.5px}
+  .bookrow .bmeta{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-left:auto;display:flex;gap:10px;align-items:center}
+  .bookrow.feeding{border-color:var(--amber-dim)}
+  .comp-sec{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin-bottom:12px}
+  .comp-sec h3{font-family:var(--serif);font-size:18px;margin-bottom:10px;color:var(--amber)}
+  .comp-point{padding:8px 0;border-bottom:1px dashed var(--line);font-size:14px;line-height:1.65;color:#d9d4c3}
+  .comp-point:last-child{border-bottom:none}
+  .comp-point .srcs{margin-top:4px;display:flex;gap:6px;flex-wrap:wrap}
+  .comp-point .srcs span{font-family:var(--mono);font-size:10px;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:1px 6px}
+  .comp-point img{max-width:min(480px,100%);border-radius:8px;border:1px solid var(--line);margin-top:8px;display:block}
 </style>
 </head>
 <body>
@@ -198,6 +219,8 @@
     <nav>
       <button class="active" data-tab="news" onclick="switchTab('news')" data-i18n="nav_news">动态</button>
       <button data-tab="invest" onclick="switchTab('invest')" data-i18n="nav_invest">投资</button>
+      <button data-tab="ibkr" onclick="switchTab('ibkr')">IBKR</button>
+      <button data-tab="books" onclick="switchTab('books')" data-i18n="nav_books">书库</button>
       <button data-tab="trends" onclick="switchTab('trends')" data-i18n="nav_trends">趋势</button>
     </nav>
   </div>
@@ -209,7 +232,10 @@
   <section class="view active" id="view-news">
     <div class="sectionhead">
       <h2 data-i18n="newsHead">行业动态 · 金融 &amp; AI</h2>
-      <div class="meta" id="news-updated">—</div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="meta" id="news-updated">—</div>
+        <button class="iconbtn" id="fetchTog" onclick="toggleFetch()" data-i18n-title="fetchTogT" title="开/关定时抓取（GitHub Actions 每周一、四自动抓取动态与招聘趋势；关闭后定时任务直接跳过，不消耗 API）">抓取: —</button>
+      </div>
     </div>
     <div class="filterbar" id="news-filter">
       <button class="on" data-c="all" onclick="setNewsFilter('all',this)" data-i18n="nf_all">全部</button>
@@ -284,6 +310,72 @@
     </div>
   </section>
 
+  <!-- IBKR -->
+  <section class="view" id="view-ibkr">
+    <div class="sectionhead">
+      <h2 data-i18n="ibkrHead">IBKR 组合 · 持仓 / 交易 / 盈亏</h2>
+      <div class="meta" id="ibkr-updated">—</div>
+    </div>
+    <div class="stats" id="ibkr-stats"></div>
+    <div class="charts2">
+      <div class="card"><h3 class="charthead" data-i18n="ibkrNavChart">净值曲线</h3><canvas id="ibkr-nav-chart"></canvas><div class="meta" id="ibkr-nav-note"></div></div>
+      <div class="card"><h3 class="charthead" data-i18n="ibkrAlloc">持仓配置</h3><canvas id="ibkr-alloc-chart"></canvas></div>
+    </div>
+    <div class="sectionhead"><h2 style="font-size:17px" data-i18n="ibkrPos">当前持仓</h2><div class="meta" id="ibkr-pos-date"></div></div>
+    <div class="tablewrap"><table id="ibkr-pos-tbl"></table></div>
+    <div class="sectionhead"><h2 style="font-size:17px" data-i18n="ibkrTrades">交易记录 · 已实现盈亏</h2></div>
+    <div class="tablewrap"><table id="ibkr-trades-tbl"></table></div>
+    <div class="sectionhead"><h2 style="font-size:17px" data-i18n="ibkrImport">导入 IBKR 报表</h2></div>
+    <div class="addrow">
+      <div style="font-size:12.5px;color:var(--muted);line-height:1.7" data-i18n-html="ibkrGuide"><b style="color:var(--ink)">怎么导出：</b>IBKR 网页 → <b>Performance &amp; Reports → Statements → Activity</b> → 期间选「月度」或自定义 → 下载 <b>CSV</b>。把文件选进来（或把内容全选粘贴）。每次导入追加一个净值快照并合并交易（自动去重）；多导几个月份就能看到净值曲线。数据只存进你的私有仓库，绝不进公开展示。</div>
+      <input type="file" id="ibkr-file" accept=".csv,text/csv">
+      <textarea id="ibkr-paste" data-i18n-ph="ibkrPastePh" placeholder="或把 Activity Statement CSV 的全部内容粘贴到这里…" style="min-height:80px;font-family:var(--mono);font-size:11px"></textarea>
+      <button class="btn" style="justify-self:start" onclick="importIBKR()" data-i18n="ibkrImportBtn">解析并导入</button>
+    </div>
+  </section>
+
+  <!-- BOOKS -->
+  <section class="view" id="view-books">
+    <div class="sectionhead">
+      <h2 data-i18n="booksHead">投资书库 · AI 蒸馏成个人投资大全</h2>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="meta" id="books-updated">—</div>
+        <button class="iconbtn" onclick="exportCompendium()" data-i18n="compExport">导出大全 MD</button>
+      </div>
+    </div>
+
+    <div class="addrow">
+      <div class="grid" style="grid-template-columns:2fr 1fr auto">
+        <div><label data-i18n="bkKeyL">Anthropic API Key（只存本机浏览器）</label><input id="bk_key" type="password" placeholder="sk-ant-…" autocomplete="off"></div>
+        <div><label data-i18n="bkModelL">模型</label><select id="bk_model"><option value="claude-opus-4-8">Opus 4.8</option><option value="claude-sonnet-4-6">Sonnet 4.6</option></select></div>
+        <button class="btn ghost" style="align-self:end" onclick="saveBookAI()" data-i18n="bkSave">保存</button>
+      </div>
+      <div class="meta" id="bk_ai_status"></div>
+    </div>
+
+    <div class="addrow">
+      <div class="grid" style="grid-template-columns:1fr 1fr auto">
+        <div><label data-i18n="bkTitleL">书名</label><input id="bk_title" data-i18n-ph="bkTitlePh" placeholder="聪明的投资者"></div>
+        <div><label data-i18n="bkAuthorL">作者（选填）</label><input id="bk_author" placeholder="Benjamin Graham"></div>
+        <button class="btn" style="align-self:end" onclick="addBook()" data-i18n="bkAdd">+ 添加书</button>
+      </div>
+    </div>
+    <div id="books-list"></div>
+
+    <div class="addrow" id="distill-panel" style="display:none">
+      <div style="font-family:var(--mono);font-size:12px;color:var(--amber)" id="distill-book-label"></div>
+      <textarea id="bk_text" style="min-height:150px" data-i18n-ph="bkTextPh" placeholder="把这本书的一章 / 一部分 / 你的读书笔记整段粘进来（一次建议 ≤2 万字，长书分几次喂，AI 会自动跟已有内容去重合并）…"></textarea>
+      <div class="grid" style="grid-template-columns:1fr auto">
+        <div><label data-i18n="bkImgL">重要图表（选填，可多张；AI 读图并把要点并入大全，图会存进你的私有仓库、显示在对应板块）</label><input type="file" id="bk_imgs" accept="image/*" multiple></div>
+        <button class="btn" style="align-self:end" id="distillBtn" onclick="distillChunk()" data-i18n="bkDistill">✨ 蒸馏并入大全</button>
+      </div>
+      <div class="meta" id="distill-status"></div>
+    </div>
+
+    <div class="sectionhead" style="margin-top:26px"><h2 style="font-size:17px" data-i18n="compHead">📖 我的投资大全（所有书去重合并）</h2><div class="meta" id="comp-meta"></div></div>
+    <div id="compendium"></div>
+  </section>
+
   <!-- TRENDS -->
   <section class="view" id="view-trends">
     <div class="sectionhead">
@@ -308,8 +400,8 @@
 <script>
 /* ============ 状态 ============ */
 let CFG = { owner:'', repo:'', token:'' };
-let DATA = { invest:null, news:null, jobs:null };
-let SHA  = { invest:null, news:null, jobs:null };
+let DATA = { invest:null, news:null, jobs:null, ibkr:null, books:null, config:null };
+let SHA  = { invest:null, news:null, jobs:null, ibkr:null, books:null, config:null };
 let dataVersion = 0;   // 每次本地改动 +1
 let savedVersion = 0;  // 已成功保存到的版本
 let saving = false;
@@ -372,6 +464,30 @@ const I18N = {
   ph_tnote:{zh:'原因 / 触发条件…',en:'Reason / trigger…'},
   ph_ptitle:{zh:'Q3 配置思路 / 减仓决策…',en:'Q3 allocation / trim decision…'},
   ph_pbody:{zh:'论点、目标价、仓位计划、风险、复盘…',en:'Thesis, target price, sizing, risks, review…'},
+  nav_books:{zh:'书库',en:'Books'},
+  fetchTogT:{zh:'开/关定时抓取（GitHub Actions 每周一、四自动抓取动态与招聘趋势；关闭后定时任务直接跳过，不消耗 API）',en:'Toggle scheduled fetching (GitHub Actions pulls news & hiring trends Mon & Thu; when off, the job skips itself and uses no API)'},
+  ibkrHead:{zh:'IBKR 组合 · 持仓 / 交易 / 盈亏',en:'IBKR Portfolio · Positions / Trades / P&L'},
+  ibkrNavChart:{zh:'净值曲线',en:'NAV curve'},
+  ibkrAlloc:{zh:'持仓配置',en:'Allocation'},
+  ibkrPos:{zh:'当前持仓',en:'Current positions'},
+  ibkrTrades:{zh:'交易记录 · 已实现盈亏',en:'Trades · Realized P/L'},
+  ibkrImport:{zh:'导入 IBKR 报表',en:'Import IBKR statement'},
+  ibkrGuide:{zh:'<b style="color:var(--ink)">怎么导出：</b>IBKR 网页 → <b>Performance &amp; Reports → Statements → Activity</b> → 期间选「月度」或自定义 → 下载 <b>CSV</b>。把文件选进来（或把内容全选粘贴）。每次导入追加一个净值快照并合并交易（自动去重）；多导几个月份就能看到净值曲线。数据只存进你的私有仓库，绝不进公开展示。',en:'<b style="color:var(--ink)">How to export:</b> IBKR web → <b>Performance &amp; Reports → Statements → Activity</b> → pick Monthly or a custom range → download <b>CSV</b>. Choose the file (or paste its full content). Each import adds one NAV snapshot and merges trades (deduped); import several months to draw the curve. Data goes only to your private repo — never to public display.'},
+  ibkrPastePh:{zh:'或把 Activity Statement CSV 的全部内容粘贴到这里…',en:'…or paste the full Activity Statement CSV content here'},
+  ibkrImportBtn:{zh:'解析并导入',en:'Parse & import'},
+  booksHead:{zh:'投资书库 · AI 蒸馏成个人投资大全',en:'Book Library · AI-distilled personal compendium'},
+  compExport:{zh:'导出大全 MD',en:'Export MD'},
+  bkKeyL:{zh:'Anthropic API Key（只存本机浏览器）',en:'Anthropic API Key (stored in this browser only)'},
+  bkModelL:{zh:'模型',en:'Model'},
+  bkSave:{zh:'保存',en:'Save'},
+  bkTitleL:{zh:'书名',en:'Book title'},
+  bkTitlePh:{zh:'聪明的投资者',en:'The Intelligent Investor'},
+  bkAuthorL:{zh:'作者（选填）',en:'Author (optional)'},
+  bkAdd:{zh:'+ 添加书',en:'+ Add book'},
+  bkTextPh:{zh:'把这本书的一章 / 一部分 / 你的读书笔记整段粘进来（一次建议 ≤2 万字，长书分几次喂，AI 会自动跟已有内容去重合并）…',en:'Paste a chapter / section / your notes from this book (≤20k chars per feed; long books take several feeds — the AI dedups & merges automatically)…'},
+  bkImgL:{zh:'重要图表（选填，可多张；AI 读图并把要点并入大全，图会存进你的私有仓库、显示在对应板块）',en:'Key figures (optional, multiple; the AI reads them into the compendium and the images are stored in your private repo)'},
+  bkDistill:{zh:'✨ 蒸馏并入大全',en:'✨ Distill & merge'},
+  compHead:{zh:'📖 我的投资大全（所有书去重合并）',en:'📖 My Investment Compendium (all books, deduped & merged)'},
   trendsHead:{zh:'招聘信号 · 大厂岗位趋势',en:'Hiring Signals · Big-Tech Job Trends'},
   trendsAnalysis:{zh:'趋势研判',en:'Trend Read'},
   trendsFoot:{zh:'<b style="color:var(--ink)">读法提示:</b> 岗位数量是<i>方向性</i>信号而非精确预测。关注的是某类岗位<i>随时间的相对变化</i>和 JD 主题的迁移，而非绝对值。数据来自公司 ATS 公开接口(Greenhouse / Lever / Ashby)，每次同步追加一个快照。',en:'<b style="color:var(--ink)">How to read:</b> Job counts are a <i>directional</i> signal, not a precise forecast. What matters is the <i>relative change over time</i> for a role type and shifts in JD themes, not absolute values. Data comes from companies’ public ATS endpoints (Greenhouse / Lever / Ashby); each sync appends one snapshot.'},
@@ -467,10 +583,13 @@ function setConn(ok){
 async function boot(){
   setConn(false);
   try{
-    const [inv,news,jobs]=await Promise.all([
+    const [inv,news,jobs,ibkr,books,conf]=await Promise.all([
       ghGet('invest.json').catch(e=>{if(e.message==='AUTH')throw e;return {data:null,sha:null}}),
       ghGet('news.json').catch(()=>({data:null,sha:null})),
       ghGet('jobs.json').catch(()=>({data:null,sha:null})),
+      ghGet('ibkr.json').catch(()=>({data:null,sha:null})),
+      ghGet('books.json').catch(()=>({data:null,sha:null})),
+      ghGet('config.json').catch(()=>({data:null,sha:null})),
     ]);
     DATA.invest = inv.data || {updated_at:'',holdings:[],transactions:[],plans:[]};
     SHA.invest  = inv.sha;
@@ -478,6 +597,12 @@ async function boot(){
     SHA.news    = news.sha;
     DATA.jobs   = jobs.data || {updated_at:'',snapshots:[],analysis:null};
     SHA.jobs    = jobs.sha;
+    DATA.ibkr   = ibkr.data || {updated_at:'',snapshots:[],trades:[]};
+    SHA.ibkr    = ibkr.sha;
+    DATA.books  = books.data || {updated_at:'',books:[],compendium:{updatedAt:'',sections:[]}};
+    SHA.books   = books.sha;
+    DATA.config = conf.data;   // null = 仓库里还没有 config.json（开关不可用）
+    SHA.config  = conf.sha;
     setConn(true);
     $('syncinfo').textContent = T('动态 ','News ')+ (DATA.news.updated_at? DATA.news.updated_at.slice(0,16).replace('T',' '):'—');
     renderAll();
@@ -504,11 +629,12 @@ async function refreshFeeds(){
 async function reloadAll(){ if(!CFG.token){openSettings();return;} toast(T('刷新中…','Refreshing…')); boot(); }
 
 /* ============ 渲染 ============ */
-function renderAll(){ renderNews(); renderInvest(); renderTrends(); }
+function renderAll(){ renderNews(); renderInvest(); renderTrends(); renderFetchTog(); renderIBKR(); renderBooks(); renderCompendium(); }
 
 function switchTab(tab){
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
   document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='view-'+tab));
+  if(tab==='ibkr') renderIBKR();   // canvas 在隐藏状态下宽度为 0，切进来时重绘
 }
 
 /* ---- 动态 ---- */
@@ -645,8 +771,8 @@ function exportPublic(){
   // 仅含对外内容；剔除数量/成本/价格/费用(权重金额) 与 note(私人备注)
   const H = d.holdings.filter(x=>x.public).map(h=>({ id:h.id, name:h.name||'', summary:'', category:h.type||'', content:'', tags:h.ticker?[h.ticker]:[], updatedAt:'' }));
   if(H.length) sections.push({ type:'holdings', label:'持仓', items:H });
-  const T = d.transactions.filter(x=>x.public).map(t=>({ id:t.id, name:`${t.action||''} ${t.name||''}`.trim(), summary:'', category:t.action||'', content:'', tags:t.ticker?[t.ticker]:[], updatedAt:t.date||'' }));
-  if(T.length) sections.push({ type:'transactions', label:'交易记录', items:T });
+  const TX = d.transactions.filter(x=>x.public).map(t=>({ id:t.id, name:`${t.action||''} ${t.name||''}`.trim(), summary:'', category:t.action||'', content:'', tags:t.ticker?[t.ticker]:[], updatedAt:t.date||'' }));
+  if(TX.length) sections.push({ type:'transactions', label:'交易记录', items:TX });
   const P = d.plans.filter(x=>x.public).map(p=>({ id:p.id, name:p.title||'', summary:'', category:p.status||'', content:p.body||'', tags:[], updatedAt:p.date||'' }));
   if(P.length) sections.push({ type:'plans', label:'计划与复盘', items:P });
 
@@ -697,6 +823,464 @@ async function commitInvest(manual){
   saving=false; $('savebtn').disabled=false;
 }
 
+/* ---- 抓取开关（GitHub Actions 定时任务的总闸，存 investment/config.json 的 fetch_enabled） ---- */
+function renderFetchTog(){
+  const b=$('fetchTog'); if(!b) return;
+  if(!DATA.config){ b.textContent=T('抓取: —','Fetch: —'); b.style.color=''; return; }
+  const on = DATA.config.fetch_enabled !== false;   // 缺省 = 开（兼容旧 config）
+  b.textContent = on ? T('⏻ 抓取: 开','⏻ Fetch: ON') : T('⏻ 抓取: 关','⏻ Fetch: OFF');
+  b.style.color = on ? 'var(--green)' : 'var(--red)';
+}
+async function toggleFetch(){
+  if(!DATA.config){ toast(T('仓库里没有 investment/config.json，无法切换','No investment/config.json in the repo'),true); return; }
+  const next = !(DATA.config.fetch_enabled !== false);
+  DATA.config.fetch_enabled = next;
+  renderFetchTog();
+  try{
+    SHA.config = await ghPut('config.json', DATA.config, SHA.config, `config: news fetch ${next?'ON':'OFF'}`);
+    toast(next ? T('已开启定时抓取（每周一、四自动运行）','Scheduled fetch ON (runs Mon & Thu)') : T('已关闭定时抓取（定时任务将直接跳过，不消耗 API）','Scheduled fetch OFF (the job will skip itself)'));
+  }catch(e){
+    DATA.config.fetch_enabled = !next; renderFetchTog();
+    toast(T('切换失败: ','Toggle failed: ')+e.message, true);
+  }
+}
+
+/* ============ IBKR 组合追踪 ============ */
+const num = s => { const v=parseFloat(String(s??'').replace(/,/g,'')); return isNaN(v)?null:v; };
+
+function parseCSVLine(line){
+  const out=[]; let cur='', q=false;
+  for(let i=0;i<line.length;i++){ const ch=line[i];
+    if(q){ if(ch==='"'){ if(line[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=ch; }
+    else { if(ch==='"') q=true; else if(ch===','){ out.push(cur); cur=''; } else cur+=ch; } }
+  out.push(cur); return out;
+}
+
+/* 解析 IBKR Activity Statement CSV（多段式：每行第 1 列是段名，第 2 列是 Header/Data） */
+function parseIBKR(text){
+  const secs={}, headers={};
+  text.split(/\r?\n/).forEach(l=>{
+    if(!l.trim()) return;
+    const f=parseCSVLine(l);
+    const sec=f[0], kind=f[1];
+    if(kind==='Header') headers[sec]=f.slice(2);
+    else if(kind==='Data'||kind==='Total'){
+      const h=headers[sec]||[]; const o={_kind:kind};
+      h.forEach((k,i)=>o[k]=f[i+2]);
+      (secs[sec]=secs[sec]||[]).push(o);
+    }
+  });
+
+  let period='';
+  (secs['Statement']||[]).forEach(o=>{ if(o['Field Name']==='Period') period=o['Field Value']||''; });
+  // Period 形如 "June 1, 2026 - June 30, 2026" 或 "June 30, 2026"，取末段作快照日期
+  let date=today();
+  if(period){
+    const tail=period.split(' - ').pop();
+    const d=new Date(tail);
+    if(!isNaN(d)) date=d.toISOString().slice(0,10);
+  }
+
+  let nav=null, cash=null;
+  (secs['Net Asset Value']||[]).forEach(o=>{
+    const cls=(o['Asset Class']||'').trim();
+    if(/^Total/i.test(cls)) nav = num(o['Current Total']) ?? nav;
+    if(/^Cash/i.test(cls))  cash = num(o['Current Total']) ?? cash;
+  });
+  if(nav==null) (secs['Change in NAV']||[]).forEach(o=>{ if((o['Field Name']||'')==='Ending Value') nav=num(o['Field Value']); });
+
+  const positions=(secs['Open Positions']||[])
+    .filter(o=>o._kind==='Data' && (o.DataDiscriminator==='Summary'||!o.DataDiscriminator))
+    .map(o=>({ symbol:(o.Symbol||'').trim(), cat:o['Asset Category']||'', cur:o.Currency||'',
+      qty:num(o.Quantity), costPrice:num(o['Cost Price']), costBasis:num(o['Cost Basis']),
+      price:num(o['Close Price']), value:num(o.Value), unreal:num(o['Unrealized P/L']) }))
+    .filter(p=>p.symbol && p.qty);
+
+  const trades=(secs['Trades']||[])
+    .filter(o=>o._kind==='Data' && o.DataDiscriminator==='Order')
+    .map(o=>({ date:String(o['Date/Time']||'').split(',')[0].trim(), symbol:(o.Symbol||'').trim(), cat:o['Asset Category']||'',
+      qty:num(o.Quantity), price:num(o['T. Price']), proceeds:num(o.Proceeds),
+      fee:num(o['Comm/Fee']), realized:num(o['Realized P/L']), code:(o.Code||'').trim() }))
+    .filter(t=>t.symbol && t.date);
+
+  return { date, nav, cash, positions, trades };
+}
+
+async function importIBKR(){
+  let text=($('ibkr-paste').value||'').trim();
+  const f=$('ibkr-file').files[0];
+  if(!text && f) text=await f.text();
+  if(!text){ toast(T('请选择 CSV 文件或粘贴内容','Choose a CSV file or paste its content'),true); return; }
+  let r;
+  try{ r=parseIBKR(text); }
+  catch(e){ toast(T('解析失败: ','Parse failed: ')+e.message,true); return; }
+  if(!r.positions.length && !r.trades.length && r.nav==null){
+    toast(T('没解析出数据 — 请确认是 IBKR「Activity Statement」的 CSV','Nothing parsed — make sure it’s an IBKR Activity Statement CSV'),true); return;
+  }
+  const d=DATA.ibkr;
+  const snap={ date:r.date, nav:r.nav, cash:r.cash, positions:r.positions };
+  const i=d.snapshots.findIndex(s=>s.date===r.date);
+  if(i>=0) d.snapshots[i]=snap; else d.snapshots.push(snap);
+  d.snapshots.sort((a,b)=>a.date.localeCompare(b.date));
+  const key=t=>[t.date,t.symbol,t.qty,t.price].join('|');
+  const have=new Set(d.trades.map(key));
+  let added=0;
+  r.trades.forEach(t=>{ if(!have.has(key(t))){ d.trades.push(t); have.add(key(t)); added++; } });
+  d.trades.sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+  d.updated_at=new Date().toISOString();
+  try{ SHA.ibkr=await ghPut('ibkr.json', d, SHA.ibkr, `data: import IBKR statement ${r.date}`); }
+  catch(e){ toast(T('保存失败: ','Save failed: ')+e.message,true); return; }
+  $('ibkr-paste').value=''; $('ibkr-file').value='';
+  renderIBKR();
+  toast(T(`导入成功：${r.date} 快照（持仓 ${r.positions.length}）＋新交易 ${added} 笔`,`Imported: ${r.date} snapshot (${r.positions.length} positions) + ${added} new trades`));
+}
+
+/* 极简 canvas 图（无依赖）：净值折线 + 配置环形 */
+function setupCanvas(cv){
+  const dpr=window.devicePixelRatio||1, w=cv.clientWidth||600, h=cv.clientHeight||190;
+  cv.width=w*dpr; cv.height=h*dpr;
+  const ctx=cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,w,h);
+  return {ctx,w,h};
+}
+function drawNavChart(cv, snaps){
+  const {ctx,w,h}=setupCanvas(cv);
+  const pts=snaps.filter(s=>s.nav!=null).map(s=>({x:s.date,y:s.nav}));
+  if(!pts.length) return false;
+  const pad={l:56,r:12,t:12,b:22};
+  const ys=pts.map(p=>p.y), ymin=Math.min(...ys), ymax=Math.max(...ys);
+  const y0=ymin===ymax? ymin-1 : ymin-(ymax-ymin)*.1, y1=ymin===ymax? ymax+1 : ymax+(ymax-ymin)*.1;
+  const X=i=> pts.length===1? (pad.l+(w-pad.l-pad.r)/2) : pad.l+(w-pad.l-pad.r)*i/(pts.length-1);
+  const Y=v=> pad.t+(h-pad.t-pad.b)*(1-(v-y0)/(y1-y0));
+  const css=getComputedStyle(document.documentElement);
+  const amber=css.getPropertyValue('--amber').trim()||'#e0aa3e', muted=css.getPropertyValue('--muted').trim()||'#8d8a78', line=css.getPropertyValue('--line').trim()||'#2c2c20';
+  ctx.strokeStyle=line; ctx.fillStyle=muted; ctx.font='10px IBM Plex Mono,monospace'; ctx.lineWidth=1;
+  for(let g=0; g<4; g++){ const v=y0+(y1-y0)*g/3, y=Y(v);
+    ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(w-pad.r,y); ctx.stroke();
+    ctx.fillText(Math.round(v).toLocaleString(), 4, y+3); }
+  ctx.strokeStyle=amber; ctx.lineWidth=2; ctx.beginPath();
+  pts.forEach((p,i)=>{ const x=X(i), y=Y(p.y); i? ctx.lineTo(x,y):ctx.moveTo(x,y); });
+  ctx.stroke();
+  ctx.fillStyle=amber;
+  pts.forEach((p,i)=>{ ctx.beginPath(); ctx.arc(X(i),Y(p.y),3,0,7); ctx.fill(); });
+  ctx.fillStyle=muted;
+  ctx.fillText(pts[0].x, pad.l, h-6);
+  const last=pts[pts.length-1].x, tw=ctx.measureText(last).width;
+  if(pts.length>1) ctx.fillText(last, w-pad.r-tw, h-6);
+  return true;
+}
+function drawAllocChart(cv, positions){
+  const {ctx,w,h}=setupCanvas(cv);
+  const vals=positions.filter(p=>p.value!=null&&p.value>0).sort((a,b)=>b.value-a.value);
+  if(!vals.length) return false;
+  const top=vals.slice(0,7);
+  const rest=vals.slice(7).reduce((s,p)=>s+p.value,0);
+  const entries=top.map(p=>({k:p.symbol,v:p.value}));
+  if(rest>0) entries.push({k:T('其他','Other'),v:rest});
+  const total=entries.reduce((s,e)=>s+e.v,0);
+  const colors=['#e0aa3e','#6f93b8','#7fae6a','#c9695a','#9a7a32','#8b7e94','#b08d57','#5c6e84'];
+  const cx=h/2+8, cy=h/2, R=Math.min(h/2-14,74), r=R*.58;
+  let a=-Math.PI/2;
+  entries.forEach((e,i)=>{
+    const sweep=e.v/total*Math.PI*2;
+    ctx.beginPath(); ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,R,a,a+sweep); ctx.closePath();
+    ctx.fillStyle=colors[i%colors.length]; ctx.fill();
+    a+=sweep;
+  });
+  const css=getComputedStyle(document.documentElement);
+  ctx.fillStyle=css.getPropertyValue('--panel').trim()||'#16170f';
+  ctx.beginPath(); ctx.arc(cx,cy,r,0,7); ctx.fill();
+  ctx.font='11px IBM Plex Mono,monospace';
+  let ly=cy-entries.length*8+6;
+  entries.forEach((e,i)=>{
+    ctx.fillStyle=colors[i%colors.length]; ctx.fillRect(cx+R+18, ly-7, 8,8);
+    ctx.fillStyle=css.getPropertyValue('--ink').trim()||'#ece7d6';
+    ctx.fillText(`${e.k} ${(e.v/total*100).toFixed(1)}%`, cx+R+32, ly);
+    ly+=16;
+  });
+  return true;
+}
+
+function renderIBKR(){
+  const d=DATA.ibkr; if(!d || !$('ibkr-stats')) return;
+  $('ibkr-updated').textContent = d.updated_at? T('更新于 ','Updated ')+d.updated_at.slice(0,16).replace('T',' '):T('尚无数据 — 在下方导入第一份报表','No data — import your first statement below');
+  const last=d.snapshots[d.snapshots.length-1]||null;
+  const pos=(last&&last.positions)||[];
+  const unreal=pos.reduce((s,p)=>s+(p.unreal||0),0);
+  const realized=d.trades.reduce((s,t)=>s+(t.realized||0),0);
+  $('ibkr-stats').innerHTML=`
+    <div class="stat"><div class="k">${T('净值 NAV','NAV')}</div><div class="v" style="font-size:21px">${last&&last.nav!=null?fmt(last.nav):'—'}</div></div>
+    <div class="stat"><div class="k">${T('现金','Cash')}</div><div class="v" style="font-size:21px">${last&&last.cash!=null?fmt(last.cash):'—'}</div></div>
+    <div class="stat"><div class="k">${T('浮动盈亏','Unrealized P/L')}</div><div class="v" style="font-size:21px;color:${unreal>=0?'var(--green)':'var(--red)'}">${pos.length?(unreal>=0?'+':'')+fmt(unreal):'—'}</div></div>
+    <div class="stat"><div class="k">${T('已实现盈亏(累计)','Realized P/L (cum.)')}</div><div class="v" style="font-size:21px;color:${realized>=0?'var(--green)':'var(--red)'}">${d.trades.length?(realized>=0?'+':'')+fmt(realized):'—'}</div></div>
+    <div class="stat"><div class="k">${T('持仓数','Positions')}</div><div class="v">${pos.length}</div></div>`;
+
+  const hasNav=drawNavChart($('ibkr-nav-chart'), d.snapshots);
+  $('ibkr-nav-note').textContent = !hasNav? T('导入报表后显示','Shows after you import a statement')
+    : d.snapshots.filter(s=>s.nav!=null).length===1? T('再导入其它月份的报表，就会连成曲线','Import more months to draw the curve') : '';
+  drawAllocChart($('ibkr-alloc-chart'), pos);
+
+  $('ibkr-pos-date').textContent = last? T('快照 ','Snapshot ')+last.date : '';
+  const pt=$('ibkr-pos-tbl');
+  if(!pos.length) pt.innerHTML=`<tr><td style="color:var(--muted);font-family:var(--mono);font-size:12px;border:none">${T('暂无持仓数据','No position data')}</td></tr>`;
+  else pt.innerHTML=`<tr><th>${T('代码','Symbol')}</th><th>${T('类别','Class')}</th><th>${T('数量','Qty')}</th><th>${T('成本价','Cost')}</th><th>${T('现价','Price')}</th><th>${T('市值','Value')}</th><th>${T('浮动盈亏','Unreal. P/L')}</th><th>%</th></tr>`+
+    [...pos].sort((a,b)=>(b.value||0)-(a.value||0)).map(p=>{
+      const pct=p.costBasis? (p.unreal/p.costBasis*100):null;
+      return `<tr><td style="font-family:var(--mono)">${esc(p.symbol)}</td><td style="color:var(--muted)">${esc(p.cat)}</td>
+      <td class="num">${fmt(p.qty)}</td><td class="num">${fmt(p.costPrice)}</td><td class="num">${fmt(p.price)}</td><td class="num">${fmt(p.value)}</td>
+      <td class="num" style="color:${(p.unreal||0)>=0?'var(--green)':'var(--red)'}">${p.unreal==null?'—':(p.unreal>=0?'+':'')+fmt(p.unreal)}</td>
+      <td class="num" style="color:${(pct||0)>=0?'var(--green)':'var(--red)'}">${pct==null?'—':(pct>=0?'+':'')+pct.toFixed(1)+'%'}</td></tr>`;
+    }).join('');
+
+  const tt=$('ibkr-trades-tbl');
+  if(!d.trades.length) tt.innerHTML=`<tr><td style="color:var(--muted);font-family:var(--mono);font-size:12px;border:none">${T('暂无交易','No trades')}</td></tr>`;
+  else tt.innerHTML=`<tr><th>${T('日期','Date')}</th><th>${T('代码','Symbol')}</th><th>${T('方向','Side')}</th><th>${T('数量','Qty')}</th><th>${T('价格','Price')}</th><th>${T('费用','Fee')}</th><th>${T('已实现盈亏','Realized P/L')}</th></tr>`+
+    d.trades.slice(0,80).map(t=>{
+      const buy=(t.qty||0)>0;
+      return `<tr><td style="font-family:var(--mono);font-size:12px">${esc(t.date)}</td><td style="font-family:var(--mono)">${esc(t.symbol)}</td>
+      <td style="color:${buy?'var(--green)':'var(--red)'}">${buy?T('买入','Buy'):T('卖出','Sell')}</td>
+      <td class="num">${fmt(Math.abs(t.qty||0))}</td><td class="num">${fmt(t.price)}</td><td class="num">${fmt(Math.abs(t.fee||0))}</td>
+      <td class="num" style="color:${(t.realized||0)>=0?'var(--green)':'var(--red)'}">${!t.realized?'—':(t.realized>=0?'+':'')+fmt(t.realized)}</td></tr>`;
+    }).join('');
+}
+
+/* ============ 投资书蒸馏（个人投资大全） ============ */
+let activeBookId=null;
+const bkImgBlobs={};   // 仓库图片路径 -> objectURL
+
+function bkAI(){ try{ return JSON.parse(localStorage.getItem('id_ai_cfg')||'{}'); }catch{ return {}; } }
+function saveBookAI(){
+  const cur=bkAI();
+  const key=$('bk_key').value.trim() || cur.key || '';
+  const model=$('bk_model').value;
+  localStorage.setItem('id_ai_cfg', JSON.stringify({key,model}));
+  $('bk_key').value='';
+  updateBkAIStatus();
+}
+function updateBkAIStatus(){
+  const c=bkAI();
+  if($('bk_model')&&c.model) $('bk_model').value=c.model;
+  $('bk_ai_status').textContent = c.key? T('AI 已就绪 · ','AI ready · ')+(c.model||'claude-opus-4-8').replace('claude-','')
+    : T('未设置 API Key — 蒸馏功能不可用（Key 只存本机浏览器，绝不进仓库）','No API key — distillation unavailable (key stays in this browser only)');
+}
+
+function addBook(){
+  const title=$('bk_title').value.trim();
+  if(!title){ toast(T('请填书名','Enter a book title'),true); return; }
+  DATA.books.books.unshift({ id:uid(), title, author:$('bk_author').value.trim(), addedAt:today(), chunks:0, imgs:0, summary:'' });
+  $('bk_title').value=''; $('bk_author').value='';
+  saveBooks(T('已添加《','Added “')+title+T('》— 点它的「喂入内容」开始蒸馏','” — click “Feed content” to start distilling'));
+  renderBooks();
+}
+function delBook(id){
+  const b=DATA.books.books.find(x=>x.id===id);
+  if(!confirm(T(`删除《${b?.title}》？（已并入大全的要点会保留，只是不再显示这本书）`,`Delete “${b?.title}”? (Points already merged into the compendium stay)`))) return;
+  DATA.books.books=DATA.books.books.filter(x=>x.id!==id);
+  if(activeBookId===id){ activeBookId=null; $('distill-panel').style.display='none'; }
+  saveBooks(); renderBooks();
+}
+function feedBook(id){
+  activeBookId=id;
+  const b=DATA.books.books.find(x=>x.id===id);
+  $('distill-panel').style.display='grid';
+  $('distill-book-label').textContent=T('正在喂入：《','Feeding: “')+ (b?.title||'') + T('》','”');
+  $('distill-status').textContent='';
+  renderBooks();
+  $('bk_text').focus();
+}
+async function saveBooks(msg){
+  DATA.books.updated_at=new Date().toISOString();
+  try{ SHA.books=await ghPut('books.json', DATA.books, SHA.books, 'data: books/compendium update'); if(msg) toast(msg); }
+  catch(e){ toast(T('保存失败: ','Save failed: ')+e.message, true); }
+}
+
+function renderBooks(){
+  const el=$('books-list'); if(!el) return;
+  const bs=DATA.books? DATA.books.books:[];
+  $('books-updated').textContent = DATA.books&&DATA.books.updated_at? T('更新于 ','Updated ')+DATA.books.updated_at.slice(0,16).replace('T',' '):'—';
+  if(!bs.length){ el.innerHTML=`<div class="empty">${T('还没有书。添加一本，然后把内容分章喂给 AI，蒸馏成你的投资大全。','No books yet. Add one, feed it chapter by chapter, and distill it into your personal compendium.')}</div>`; return; }
+  el.innerHTML=bs.map(b=>`
+    <div class="bookrow${b.id===activeBookId?' feeding':''}">
+      <div><span class="bt">《${esc(b.title)}》</span> ${b.author?`<span class="ba">${esc(b.author)}</span>`:''}
+        ${b.summary?`<div class="ba" style="margin-top:3px">${esc(b.summary)}</div>`:''}</div>
+      <div class="bmeta">
+        <span>${T('已喂 ','Fed ')}${b.chunks||0}${T(' 段',' chunks')}${b.imgs?` · ${b.imgs}${T(' 图',' imgs')}`:''}</span>
+        <button class="iconbtn" onclick="feedBook('${b.id}')">${b.id===activeBookId?T('喂入中…','Feeding…'):T('喂入内容','Feed content')}</button>
+        <span class="del" onclick="delBook('${b.id}')">${T('删除','Delete')}</span>
+      </div>
+    </div>`).join('');
+}
+
+/* 图片：本地文件 → 压缩 JPEG base64（喂 AI + 存仓库） */
+function fileToJpegB64(file, maxSide){
+  return new Promise((resolve,reject)=>{
+    const img=new Image();
+    img.onload=()=>{
+      const scale=Math.min(1,(maxSide||1400)/Math.max(img.width,img.height));
+      const cv=document.createElement('canvas');
+      cv.width=Math.round(img.width*scale); cv.height=Math.round(img.height*scale);
+      cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+      resolve(cv.toDataURL('image/jpeg',0.82).split(',')[1]);
+      URL.revokeObjectURL(img.src);
+    };
+    img.onerror=reject;
+    img.src=URL.createObjectURL(file);
+  });
+}
+async function ghPutRaw(file, b64, message){
+  const url=`https://api.github.com/repos/${CFG.owner}/${CFG.repo}/contents/${PREFIX}/${file}`;
+  const body={message, content:b64};
+  let r=await fetch(url,{method:'PUT',headers:{Authorization:`Bearer ${CFG.token}`,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify(body)});
+  if(r.status===409||r.status===422){
+    const cur=await fetch(url,{headers:{Authorization:`Bearer ${CFG.token}`,Accept:'application/vnd.github+json'}});
+    if(cur.ok){ body.sha=(await cur.json()).sha;
+      r=await fetch(url,{method:'PUT',headers:{Authorization:`Bearer ${CFG.token}`,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify(body)}); }
+  }
+  if(!r.ok) throw new Error('GitHub '+r.status);
+}
+async function repoImg(path){
+  if(bkImgBlobs[path]) return bkImgBlobs[path];
+  const r=await fetch(`https://api.github.com/repos/${CFG.owner}/${CFG.repo}/contents/${PREFIX}/${path}`,
+    {headers:{Authorization:`Bearer ${CFG.token}`,Accept:'application/vnd.github.raw'}});
+  if(!r.ok) throw new Error('GitHub '+r.status);
+  const u=URL.createObjectURL(await r.blob());
+  bkImgBlobs[path]=u; return u;
+}
+
+const DISTILL_SYSTEM =
+'你是「个人投资大全」的蒸馏编辑。用户会持续喂入多本投资书籍的章节或笔记，你负责把它们合并成一份不断生长的、按主题组织的投资知识大全。\n' +
+'规则：\n' +
+'1. 输入包含【现有大全】(JSON) 和【新材料】(某本书的一段内容，可能附图)。输出更新后的完整大全 sections。\n' +
+'2. 去重合并：新材料的要点若与现有要点重复 → 合并成一条更好的（sources 取并集）；观点冲突 → 保留一条要点同时呈现分歧并标注各自出处。\n' +
+'3. 每条要点 (point) 是一段自足的话（一般 1–3 句），讲清一个可用的认知/方法/数据，不要空洞口号。\n' +
+'4. 板块 (heading) 按主题而非按书：如 估值方法、市场心理与行为、风险与仓位管理、宏观与周期、投资体系与流程、案例与教训 等；沿用现有板块名，必要时才新增。\n' +
+'5. sources 数组填 bookId（输入里给了本书的 bookId 与现有要点的 sources）。\n' +
+'6. 若附带图片：读取图中关键信息并入要点；某条要点确实需要配图理解时，把该要点的 image_ref 设为对应图片序号（从 1 起），最多给最重要的 2 条配图。\n' +
+'7. 一律简体中文。book_summary 用一句话概括这本书（基于至今喂入的所有内容）。\n' +
+'8. 现有要点除非与新材料重复/冲突，否则原样保留（包括其 img 字段）——绝不丢内容。';
+
+const DISTILL_SCHEMA={
+  type:'object',
+  properties:{
+    sections:{type:'array',items:{type:'object',properties:{
+      heading:{type:'string'},
+      points:{type:'array',items:{type:'object',properties:{
+        text:{type:'string'},
+        sources:{type:'array',items:{type:'string'}},
+        img:{type:'string'},
+        image_ref:{type:'integer'}
+      },required:['text','sources'],additionalProperties:false}}
+    },required:['heading','points'],additionalProperties:false}},
+    book_summary:{type:'string'}
+  },
+  required:['sections','book_summary'],
+  additionalProperties:false
+};
+
+async function distillChunk(){
+  const ai=bkAI();
+  if(!ai.key){ toast(T('请先保存 Anthropic API Key','Save your Anthropic API key first'),true); return; }
+  const book=DATA.books.books.find(b=>b.id===activeBookId);
+  if(!book){ toast(T('先点某本书的「喂入内容」','Click a book’s “Feed content” first'),true); return; }
+  const text=$('bk_text').value.trim();
+  const files=[...($('bk_imgs').files||[])].slice(0,6);
+  if(!text && !files.length){ toast(T('请粘贴内容或选择图片','Paste text or choose images'),true); return; }
+
+  const btn=$('distillBtn'); btn.disabled=true;
+  const st=$('distill-status');
+  try{
+    st.textContent=T('准备材料…','Preparing…');
+    const imgB64s=[];
+    for(const f of files) imgB64s.push(await fileToJpegB64(f,1400));
+
+    const comp=DATA.books.compendium||{sections:[]};
+    const compJson=JSON.stringify({sections:(comp.sections||[]).map(s=>({heading:s.heading,points:(s.points||[]).map(p=>({text:p.text,sources:p.sources||[],img:p.img||undefined}))}))});
+    if(compJson.length>180000){ st.textContent=''; toast(T('大全已很大，本次请求可能超限——建议先「导出大全 MD」留档','Compendium is very large; consider exporting MD first'),true); }
+
+    const content=[{type:'text',text:
+      '【现有大全】\n'+compJson+
+      '\n\n【本书信息】bookId: '+book.id+'  书名:《'+book.title+'》'+(book.author?'  作者: '+book.author:'')+
+      '\n\n【新材料】\n'+(text||'（本次只有图片）')}];
+    imgB64s.forEach((b,i)=>{
+      content.push({type:'text',text:'图片 '+(i+1)+'：'});
+      content.push({type:'image',source:{type:'base64',media_type:'image/jpeg',data:b}});
+    });
+
+    st.textContent=T('AI 蒸馏中…（30–90 秒，别关页面）','Distilling… (30–90s, keep the page open)');
+    const r=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'content-type':'application/json','x-api-key':ai.key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({ model:ai.model||'claude-opus-4-8', max_tokens:30000, system:DISTILL_SYSTEM,
+        messages:[{role:'user',content}], output_config:{format:{type:'json_schema',schema:DISTILL_SCHEMA}} })
+    });
+    if(r.status===401) throw new Error(T('API Key 无效 (401)','Invalid API key (401)'));
+    if(!r.ok) throw new Error('HTTP '+r.status+' '+(await r.text()).slice(0,140));
+    const j=await r.json();
+    const tb=(j.content||[]).find(b=>b.type==='text');
+    if(!tb) throw new Error(T('未返回内容','No content returned')+(j.stop_reason==='max_tokens'?T('（超长，试着少喂点）',' (too long — feed less at once)'):''));
+    const out=JSON.parse(tb.text);
+    if(!Array.isArray(out.sections)) throw new Error(T('返回结构不完整','Malformed response'));
+
+    // 上传被引用的图片 → 把 image_ref 换成仓库路径
+    st.textContent=T('保存图片与大全…','Saving images & compendium…');
+    for(const s of out.sections) for(const p of (s.points||[])){
+      if(p.image_ref && imgB64s[p.image_ref-1]){
+        const path='book-images/'+book.id+'-'+Date.now()+'-'+p.image_ref+'.jpg';
+        try{ await ghPutRaw(path, imgB64s[p.image_ref-1], 'books: figure from '+book.title); p.img=path; }catch(e){}
+      }
+      delete p.image_ref;
+    }
+
+    DATA.books.compendium={ updatedAt:new Date().toISOString(), sections:out.sections };
+    book.chunks=(book.chunks||0)+1;
+    book.imgs=(book.imgs||0)+imgB64s.length;
+    if(out.book_summary) book.summary=out.book_summary;
+    await saveBooks();
+    $('bk_text').value=''; $('bk_imgs').value='';
+    st.textContent='';
+    renderBooks(); renderCompendium();
+    toast(T('已蒸馏并入大全 ✓ 继续喂下一段，或换一本书','Distilled & merged ✓ Feed the next chunk or switch books'));
+    $('compendium').scrollIntoView({behavior:'smooth',block:'start'});
+  }catch(e){
+    st.textContent=''; toast(T('蒸馏失败: ','Distill failed: ')+e.message,true);
+  }finally{ btn.disabled=false; }
+}
+
+function renderCompendium(){
+  const el=$('compendium'); if(!el) return;
+  const comp=(DATA.books&&DATA.books.compendium)||{sections:[]};
+  const secs=comp.sections||[];
+  const bookName=id=>{ const b=(DATA.books.books||[]).find(x=>x.id===id); return b? b.title : id; };
+  const nPts=secs.reduce((s,x)=>s+(x.points||[]).length,0);
+  $('comp-meta').textContent = nPts? `${secs.length}${T(' 个板块 · ',' sections · ')}${nPts}${T(' 条要点',' points')}${comp.updatedAt? ' · '+comp.updatedAt.slice(0,10):''}`:'';
+  if(!secs.length){ el.innerHTML=`<div class="empty">${T('大全还是空的。加一本书、喂入第一章，它就开始生长。','The compendium is empty. Add a book and feed the first chapter to start growing it.')}</div>`; return; }
+  el.innerHTML=secs.map(s=>`
+    <div class="comp-sec"><h3>${esc(s.heading)}</h3>
+      ${(s.points||[]).map(p=>`
+        <div class="comp-point">${esc(p.text)}
+          ${p.img?`<img data-bkimg="${esc(p.img)}" alt="">`:''}
+          <div class="srcs">${(p.sources||[]).map(id=>`<span>《${esc(bookName(id))}》</span>`).join('')}</div>
+        </div>`).join('')}
+    </div>`).join('');
+  el.querySelectorAll('img[data-bkimg]').forEach(img=>{
+    repoImg(img.getAttribute('data-bkimg')).then(u=>{ img.src=u; }).catch(()=>{ img.remove(); });
+  });
+}
+function exportCompendium(){
+  const comp=(DATA.books&&DATA.books.compendium)||{sections:[]};
+  if(!(comp.sections||[]).length){ toast(T('大全还是空的','Compendium is empty'),true); return; }
+  const bookName=id=>{ const b=(DATA.books.books||[]).find(x=>x.id===id); return b? b.title:id; };
+  let md='# '+T('我的投资大全','My Investment Compendium')+'\n\n'+T('> 由 ','> Distilled from ')+(DATA.books.books||[]).length+T(' 本书蒸馏合并 · ',' books · ')+(comp.updatedAt||'').slice(0,10)+'\n\n';
+  (comp.sections||[]).forEach(s=>{
+    md+='## '+s.heading+'\n\n';
+    (s.points||[]).forEach(p=>{ md+='- '+p.text+((p.sources||[]).length?'（'+p.sources.map(bookName).map(t=>'《'+t+'》').join(' ')+'）':'')+'\n'; });
+    md+='\n';
+  });
+  const blob=new Blob([md],{type:'text/markdown'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='investment-compendium.md'; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+
 /* ---- 趋势 ---- */
 function renderTrends(){
   const j=DATA.jobs||{snapshots:[]};
@@ -745,6 +1329,7 @@ window.addEventListener('beforeunload',e=>{ if(isDirty()||saving){ commitInvest(
 $('t_date').value=today(); $('p_date').value=today();
 loadCfg();
 applyStatic();
+updateBkAIStatus();
 if(CFG.token){ $('gate').style.display='none'; boot(); }
 </script>
 </body>
