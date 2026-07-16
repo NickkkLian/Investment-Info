@@ -388,7 +388,13 @@
 
     <div class="sectionhead"><h2 style="font-size:17px" data-i18n="wsImportHead">导入 WS 报表</h2></div>
     <div class="addrow">
-      <div style="font-size:12.5px;color:var(--muted);line-height:1.7" data-i18n-html="wsImportGuide"><b style="color:var(--red)">尚未开放</b> —— Wealthsimple <b>没有官方 API</b>，网上那些自动抓取的库要存你的账号密码＋2FA（券商凭据，本工具一律不碰，WS 也在封）。所以走 IBKR 同款「你导出、我解析」。<br><b style="color:var(--ink)">要开通它，请给一份样本：</b>WS 网页 → <b>Activity</b>（或 Documents → Statements）→ 导出 <b>CSV</b> → 把文件放到本机任意位置、把路径告诉 Claude。<b>格式我没见过，不会照猜写解析器</b>（猜错会把你的持仓/成本算错）；见到真样本当天就能接上。</div>
+      <div style="font-size:12.5px;color:var(--muted);line-height:1.7" data-i18n-html="wsImportGuide2"><b style="color:var(--ink)">怎么导出：</b>WS 网页 → 右上头像 → <b>Documents / Activity</b> → 两份都下载：<b>holdings-report</b>（持仓快照）＋ <b>activities-export</b>（成交与出入金）。两个文件可<b>一次选中一起导入</b>，会自动认。<br><b style="color:var(--ink)">持仓表</b>＝整体替换当前持仓（它<b>不含现金</b>）。<b style="color:var(--ink)">活动表</b>＝成交入库、EFT 出入金自动记进 TFSA 额度，并按导出的日期区间<b>整段替换</b>（同一文件重复导入结果不变；你手动加的流水不受影响）。<br><b style="color:var(--ink)">认不出的活动（股息/利息/转账等）不会被算进额度</b>，会原样列出来给你自己判断——猜错会让你以为还有额度而超额。</div>
+      <input type="file" id="ws-file" accept=".csv,text/csv" multiple>
+      <textarea id="ws-paste" data-i18n-ph="wsPastePh" placeholder="或把某一份 CSV 的全部内容粘贴到这里…" style="min-height:70px;font-family:var(--mono);font-size:11px"></textarea>
+      <button class="btn" style="justify-self:start" onclick="importWS()" data-i18n="wsImportBtn">解析并导入</button>
+      <div id="ws-import-report" style="font-size:12.5px;line-height:1.9;font-family:var(--mono)"></div>
+    </div>
+    <div style="display:none" data-i18n-html="wsImportGuide"><b style="color:var(--red)">尚未开放</b> —— Wealthsimple <b>没有官方 API</b>，网上那些自动抓取的库要存你的账号密码＋2FA（券商凭据，本工具一律不碰，WS 也在封）。所以走 IBKR 同款「你导出、我解析」。<br><b style="color:var(--ink)">要开通它，请给一份样本：</b>WS 网页 → <b>Activity</b>（或 Documents → Statements）→ 导出 <b>CSV</b> → 把文件放到本机任意位置、把路径告诉 Claude。<b>格式我没见过，不会照猜写解析器</b>（猜错会把你的持仓/成本算错）；见到真样本当天就能接上。</div>
     </div>
   </section>
 
@@ -557,6 +563,9 @@ const I18N = {
   wsSnap:{zh:'📌 存为今日快照',en:'📌 Save today snapshot'},
   wsSnapGuide:{zh:'改完持仓/现价后点<b style="color:var(--ink)">「存为今日快照」</b>，净值曲线才会多一个点（同一天再存＝覆盖当天）。净值＝持仓市值合计＋现金，自动算。',en:'After updating holdings/prices, click <b style="color:var(--ink)">Save today snapshot</b> to add a point to the NAV curve (saving twice the same day overwrites it). NAV = total market value + cash, computed automatically.'},
   wsImportHead:{zh:'导入 WS 报表',en:'Import WS statement'},
+  wsImportGuide2:{zh:'<b style="color:var(--ink)">怎么导出：</b>WS 网页 → 右上头像 → <b>Documents / Activity</b> → 两份都下载：<b>holdings-report</b>（持仓快照）＋ <b>activities-export</b>（成交与出入金）。两个文件可<b>一次选中一起导入</b>，会自动认。<br><b style="color:var(--ink)">持仓表</b>＝整体替换当前持仓（它<b>不含现金</b>）。<b style="color:var(--ink)">活动表</b>＝成交入库、EFT 出入金自动记进 TFSA 额度，并按导出的日期区间<b>整段替换</b>（同一文件重复导入结果不变；你手动加的流水不受影响）。<br><b style="color:var(--ink)">认不出的活动（股息/利息/转账等）不会被算进额度</b>，会原样列出来给你自己判断——猜错会让你以为还有额度而超额。',en:'<b style="color:var(--ink)">How to export:</b> WS web → avatar → <b>Documents / Activity</b> → download both: <b>holdings-report</b> (position snapshot) + <b>activities-export</b> (trades & cash). You can <b>select both files at once</b>; each is auto-detected.<br><b style="color:var(--ink)">Holdings</b> = full replace of current positions (it has <b>no cash field</b>). <b style="color:var(--ink)">Activities</b> = trades imported, EFT in/out auto-recorded as TFSA contributions/withdrawals, and the exported date range is <b>replaced wholesale</b> (re-importing the same file is idempotent; your manual flows are untouched).<br><b style="color:var(--ink)">Unrecognized activities (dividends/interest/transfers) are NOT counted toward room</b> — they are listed verbatim for you to judge; guessing could make you think you have room and over-contribute.'},
+  wsPastePh:{zh:'或把某一份 CSV 的全部内容粘贴到这里…',en:'…or paste the full content of one CSV here'},
+  wsImportBtn:{zh:'解析并导入',en:'Parse & import'},
   wsImportGuide:{zh:'<b style="color:var(--red)">尚未开放</b> —— Wealthsimple <b>没有官方 API</b>，网上那些自动抓取的库要存你的账号密码＋2FA（券商凭据，本工具一律不碰，WS 也在封）。所以走 IBKR 同款「你导出、我解析」。<br><b style="color:var(--ink)">要开通它，请给一份样本：</b>WS 网页 → <b>Activity</b>（或 Documents → Statements）→ 导出 <b>CSV</b> → 把文件放到本机任意位置、把路径告诉 Claude。<b>格式我没见过，不会照猜写解析器</b>（猜错会把你的持仓/成本算错）；见到真样本当天就能接上。',en:'<b style="color:var(--red)">Not enabled yet</b> — Wealthsimple has <b>no official API</b>, and the unofficial scrapers need your login + 2FA (brokerage credentials — this tool never touches them, and WS blocks them anyway). So it follows the IBKR pattern: you export, it parses.<br><b style="color:var(--ink)">To enable it, provide a sample:</b> WS web → <b>Activity</b> (or Documents → Statements) → export <b>CSV</b> → save it anywhere locally and give Claude the path. <b>The format has not been seen, so no parser will be written from guesswork</b> (a wrong guess would corrupt your positions/cost basis); once a real sample exists it can be wired up the same day.'},
   ibkrGuide:{zh:'<b style="color:var(--ink)">怎么导出：</b>IBKR 网页 → <b>Performance &amp; Reports → Statements → Activity</b> → 期间选「月度」或自定义 → 下载 <b>CSV</b>。把文件选进来（或把内容全选粘贴）。每次导入追加一个净值快照并合并交易（自动去重）；多导几个月份就能看到净值曲线。数据只存进你的私有仓库，绝不进公开展示。',en:'<b style="color:var(--ink)">How to export:</b> IBKR web → <b>Performance &amp; Reports → Statements → Activity</b> → pick Monthly or a custom range → download <b>CSV</b>. Choose the file (or paste its full content). Each import adds one NAV snapshot and merges trades (deduped); import several months to draw the curve. Data goes only to your private repo — never to public display.'},
   ibkrPastePh:{zh:'或把 Activity Statement CSV 的全部内容粘贴到这里…',en:'…or paste the full Activity Statement CSV content here'},
@@ -1130,6 +1139,123 @@ async function snapWs(){
   if(i>=0) DATA.ws.snapshots[i]=snap; else DATA.ws.snapshots.push(snap);   // 同日＝覆盖
   DATA.ws.snapshots.sort((a,b)=>a.date.localeCompare(b.date));
   if(await wsSave('data: WS snapshot '+date)){ renderWS(); toast(T('已存快照 '+date,'Snapshot saved '+date)); }
+}
+/* ===== WS 报表解析（照 2026-07-15 站长给的真实样本写，没见过的一律不猜）=====
+   两种导出，按表头自动认：
+   ① holdings-report：Account Name,…,Symbol,…,Quantity,…,Market Price,…,Book Value (CAD),…,Market Value,…
+      → 全量持仓快照（权威）。注意：**没有现金字段**，现金只能由活动表推。
+   ② activities-export：transaction_date,…,activity_type,activity_sub_type,description,…,quantity,unit_price,commission,net_cash_amount
+      → 成交 + 出入金。末尾有一行 "As of …" 和空行，要跳过。
+
+   ⚠️ 致命细节（实测样本得出，别改回去）：同一天可能有**多笔完全相同**的成交
+   （样本里两笔 BUY 各 13.1814 股 @189.6599，持仓表 26.3628 = 2×13.1814 印证是两笔真实成交）。
+   IBKR 那套 `date|symbol|qty|price` 去重会把它们合并 → 持仓凭空少一半。
+   故本解析器**不按内容去重**，改用「按导出覆盖的日期区间整段替换」：同一份文件重复导入结果不变，
+   区间重叠的新导出覆盖旧数据，手动加的流水（src!=='ws'）不受影响。 */
+function wsRows(text){
+  const lines=text.split(/\r?\n/).filter(l=>l.trim() && !/^"?As of /.test(l.trim()));
+  if(!lines.length) return null;
+  const head=parseCSVLine(lines[0]).map(h=>h.trim());
+  return {head, rows:lines.slice(1).map(l=>{ const f=parseCSVLine(l); const o={}; head.forEach((k,i)=>o[k]=(f[i]==null?'':f[i].trim())); return o; })};
+}
+function wsKindOf(head){
+  const h=head.join('|');
+  if(/transaction_date/.test(h) && /activity_type/.test(h)) return 'activities';
+  if(/Account Name/.test(h) && /Book Value \(CAD\)/.test(h)) return 'holdings';
+  return null;
+}
+const WS_CAT={EXCHANGE_TRADED_FUND:'ETF'};   // 只映射见过的，其余原样透传（不猜）
+function parseWSHoldings(rows){
+  const pos=[], skipped=[];
+  rows.forEach(r=>{
+    if((r['Account Type']||'').toUpperCase()!=='TFSA'){ skipped.push((r['Account Type']||'?')+' '+(r['Symbol']||'')); return; }
+    const qty=+r['Quantity']||0;
+    const book=r['Book Value (CAD)']===''?null:+r['Book Value (CAD)'];
+    pos.push({ id:uid(), symbol:r['Symbol']||'', cat:WS_CAT[r['Security Type']]||r['Security Type']||'',
+      cur:r['Market Value Currency']||'CAD', qty,
+      costPrice:(book!=null&&qty)?book/qty:null,
+      price:r['Market Price']===''?null:+r['Market Price'] });
+  });
+  return {positions:pos, skipped};
+}
+function parseWSActivities(rows){
+  const trades=[], flows=[], unknown=[]; let cashDelta=0, lo=null, hi=null;
+  rows.forEach(r=>{
+    if((r.account_type||'').toUpperCase()!=='TFSA'){ unknown.push({date:r.transaction_date, why:T('非 TFSA 账户','Not a TFSA account'), raw:(r.account_type||'')+' '+(r.description||'')}); return; }
+    const d=r.transaction_date||''; if(d){ if(!lo||d<lo) lo=d; if(!hi||d>hi) hi=d; }
+    const net=r.net_cash_amount===''?0:+r.net_cash_amount;
+    cashDelta+=net;
+    if(r.activity_type==='Trade'){
+      trades.push({date:d, symbol:r.symbol||'', cat:'', qty:r.quantity===''?null:+r.quantity,
+        price:r.unit_price===''?null:+r.unit_price, proceeds:net, fee:r.commission===''?0:+r.commission,
+        realized:null, code:r.activity_sub_type||''});
+      return;
+    }
+    if(r.activity_type==='MoneyMovement' && (r.activity_sub_type||'').toUpperCase()==='EFT'){
+      // EFT 进出 TFSA ＝ 供款/取款（样本里 Deposit +5000 两笔）。按金额正负判向。
+      if(net>0){ flows.push({id:uid(), date:d, type:'contribute', amount:net, note:'WS '+(r.description||'EFT'), src:'ws'}); return; }
+      if(net<0){ flows.push({id:uid(), date:d, type:'withdraw', amount:-net, note:'WS '+(r.description||'EFT'), src:'ws'}); return; }
+    }
+    /* 其余 MoneyMovement（股息/利息/账户间转账…）一律**不猜**：
+       TFSA 里股息利息不占额度、机构间直接转账也不占，但从非注册账户转入就占——猜错会让站长
+       以为还有额度→超额→CRA 罚 1%/月。故列出来交给他自己判断。 */
+    unknown.push({date:d, why:T('未识别的活动类型，没算进额度','Unrecognized activity — not counted toward room'), raw:[r.activity_type,r.activity_sub_type,r.description,net].filter(Boolean).join(' · ')});
+  });
+  return {trades, flows, unknown, cashDelta, lo, hi};
+}
+async function importWS(){
+  const texts=[]; const files=$('ws-file').files;
+  for(let i=0;i<files.length;i++) texts.push(await files[i].text());
+  const pasted=($('ws-paste').value||'').trim(); if(pasted) texts.push(pasted);
+  if(!texts.length){ toast(T('请选择 CSV 文件或粘贴内容','Choose CSV file(s) or paste content'),true); return; }
+
+  const report=[]; let touched=false, suggestCash=null;
+  for(const text of texts){
+    const parsed=wsRows(text); if(!parsed){ report.push('⚠️ '+T('空文件','Empty file')); continue; }
+    const kind=wsKindOf(parsed.head);
+    if(!kind){ report.push('⚠️ '+T('认不出这个 CSV（表头不是 WS 的 holdings-report 或 activities-export）','Unrecognized CSV — header is neither WS holdings-report nor activities-export')); continue; }
+
+    if(kind==='holdings'){
+      const {positions, skipped}=parseWSHoldings(parsed.rows);
+      DATA.ws.positions=positions; touched=true;    // 全量快照＝整体替换
+      report.push('✅ '+T('持仓表：导入 '+positions.length+' 个持仓（整体替换）','Holdings: imported '+positions.length+' positions (full replace)'));
+      if(skipped.length) report.push('　　'+T('跳过非 TFSA 行 '+skipped.length+' 条：','Skipped '+skipped.length+' non-TFSA rows: ')+esc(skipped.join('、')));
+      report.push('　　⚠️ '+T('持仓表没有现金字段 — 现金请用活动表推算或手填','Holdings report has no cash field — derive cash from activities or enter it manually'));
+    } else {
+      const {trades, flows, unknown, cashDelta, lo, hi}=parseWSActivities(parsed.rows);
+      if(lo&&hi){
+        // 按区间整段替换（不按内容去重——样本证明同日同量同价的成交可以是两笔真的）
+        DATA.ws.trades=(DATA.ws.trades||[]).filter(t=>!(t.date>=lo&&t.date<=hi)).concat(trades);
+        DATA.ws.trades.sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+        DATA.ws.flows=(DATA.ws.flows||[]).filter(f=>!(f.src==='ws'&&f.date>=lo&&f.date<=hi)).concat(flows);
+        DATA.ws.flows.sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+        touched=true;
+        report.push('✅ '+T('活动表 '+lo+' ~ '+hi+'：成交 '+trades.length+' 笔、出入金 '+flows.length+' 笔（该区间整段替换，手动加的流水不受影响）',
+                            'Activities '+lo+' ~ '+hi+': '+trades.length+' trades, '+flows.length+' cash flows (range replaced; manual flows untouched)'));
+        suggestCash=cashDelta;
+      }
+      if(unknown.length){
+        report.push('⚠️ '+T('有 '+unknown.length+' 条没算进额度（我不确定算不算供款，交给你判断）：', unknown.length+' rows were NOT counted toward room (unsure if they are contributions — your call):'));
+        unknown.slice(0,8).forEach(u=>report.push('　　· '+esc(u.date||'')+' '+esc(u.raw)));
+        if(unknown.length>8) report.push('　　…'+T('还有 '+(unknown.length-8)+' 条','and '+(unknown.length-8)+' more'));
+      }
+    }
+  }
+  if(suggestCash!=null){
+    report.push('💡 '+T('按活动表推算现金 = '+fmt(suggestCash)+'（<b>仅当你导出的是「全部历史」才准</b>；持仓表不含现金）','Cash derived from activities = '+fmt(suggestCash)+' (<b>only correct if you exported the FULL history</b>; the holdings report has no cash)')
+      +' <button class="iconbtn" onclick="applyWsCash('+suggestCash+')">'+T('填入现金','Use as cash')+'</button>');
+  }
+  if(touched){
+    if(!await wsSave('data: import WS statement')) return;
+    renderWS();
+  }
+  $('ws-import-report').innerHTML=report.join('<br>');
+  $('ws-file').value=''; $('ws-paste').value='';
+  if(touched) toast(T('导入完成 — 看下方报告','Imported — see the report below'));
+}
+async function applyWsCash(v){
+  DATA.ws.cash=+v;
+  if(await wsSave('data: set WS cash from activities')){ $('ws_cash').value=v; renderWS(); toast(T('现金已填入','Cash applied')); }
 }
 function renderWS(){
   const d=DATA.ws; if(!d || !$('ws-stats')) return;
