@@ -220,6 +220,7 @@
       <button class="active" data-tab="news" onclick="switchTab('news')" data-i18n="nav_news">动态</button>
       <button data-tab="invest" onclick="switchTab('invest')" data-i18n="nav_invest">投资</button>
       <button data-tab="ibkr" onclick="switchTab('ibkr')">IBKR</button>
+      <button data-tab="ws" onclick="switchTab('ws')">Wealthsimple</button>
       <button data-tab="books" onclick="switchTab('books')" data-i18n="nav_books">书库</button>
       <button data-tab="trends" onclick="switchTab('trends')" data-i18n="nav_trends">趋势</button>
     </nav>
@@ -331,6 +332,63 @@
       <input type="file" id="ibkr-file" accept=".csv,text/csv">
       <textarea id="ibkr-paste" data-i18n-ph="ibkrPastePh" placeholder="或把 Activity Statement CSV 的全部内容粘贴到这里…" style="min-height:80px;font-family:var(--mono);font-size:11px"></textarea>
       <button class="btn" style="justify-self:start" onclick="importIBKR()" data-i18n="ibkrImportBtn">解析并导入</button>
+    </div>
+  </section>
+
+  <!-- WEALTHSIMPLE (TFSA) -->
+  <section class="view" id="view-ws">
+    <div class="sectionhead">
+      <h2 data-i18n="wsHead">Wealthsimple TFSA · 持仓 / 供款额度</h2>
+      <div class="meta" id="ws-updated">—</div>
+    </div>
+    <div class="stats" id="ws-stats"></div>
+    <div class="charts2">
+      <div class="card"><h3 class="charthead" data-i18n="wsNavChart">净值曲线</h3><canvas id="ws-nav-chart"></canvas><div class="meta" id="ws-nav-note"></div></div>
+      <div class="card"><h3 class="charthead" data-i18n="wsAlloc">持仓配置</h3><canvas id="ws-alloc-chart"></canvas></div>
+    </div>
+
+    <div class="sectionhead"><h2 style="font-size:17px" data-i18n="wsRoomHead">TFSA 供款额度</h2><div class="meta" id="ws-room-note"></div></div>
+    <div class="addrow">
+      <div style="font-size:12.5px;color:var(--muted);line-height:1.7" data-i18n-html="wsRoomGuide"><b style="color:var(--ink)">基准额度从哪来：</b>CRA <b>My Account → TFSA → Contribution room</b> 里那个数字才是权威的（本工具<b>不替你推算每年限额</b>——算错会害你超额，CRA 罚超出部分 <b>1%/月</b>）。填「该数字」＋「它对应的日期」（通常是 1 月 1 日），下面的流水会在此基准上加减。<br><b style="color:var(--ink)">取款的坑：</b>当年取款要到<b>下一个 1 月 1 日</b>才恢复额度，所以本年取款不计入可用额度。<br><b style="color:var(--ink)">每年 1 月记得回来更新基准</b>（新年度限额和去年取款的恢复都在 CRA 那个数里）。</div>
+      <div class="grid" style="grid-template-columns:1fr 1fr auto">
+        <div><label data-i18n="wsRoomAmtL">CRA 可用额度（CAD）</label><input id="ws_room_amt" type="number" step="0.01" placeholder="7000"></div>
+        <div><label data-i18n="wsRoomAsofL">该数字对应日期</label><input id="ws_room_asof" type="date"></div>
+        <button class="btn" style="justify-self:start;align-self:end" onclick="saveWsRoom()" data-i18n="wsRoomSave">保存基准</button>
+      </div>
+    </div>
+    <div class="tablewrap"><table id="ws-flow-tbl"></table></div>
+    <div class="addrow">
+      <div class="grid" style="grid-template-columns:auto 1fr 1fr 2fr auto">
+        <div><label data-i18n="wsFlowTypeL">类型</label><select id="ws_f_type"><option value="contribute" data-i18n="wsContribute">供款</option><option value="withdraw" data-i18n="wsWithdraw">取款</option></select></div>
+        <div><label data-i18n="wsFlowDateL">日期</label><input id="ws_f_date" type="date"></div>
+        <div><label data-i18n="wsFlowAmtL">金额 CAD</label><input id="ws_f_amt" type="number" step="0.01"></div>
+        <div><label data-i18n="wsFlowNoteL">备注（选填）</label><input id="ws_f_note"></div>
+        <button class="btn" style="justify-self:start;align-self:end" onclick="addWsFlow()" data-i18n="wsFlowAdd">添加</button>
+      </div>
+    </div>
+
+    <div class="sectionhead"><h2 style="font-size:17px" data-i18n="wsPos">当前持仓</h2><div class="meta" id="ws-pos-note"></div></div>
+    <div class="tablewrap"><table id="ws-pos-tbl"></table></div>
+    <div class="addrow">
+      <div class="grid" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr auto">
+        <div><label data-i18n="wsSym">代码</label><input id="ws_p_sym" placeholder="VFV.TO"></div>
+        <div><label data-i18n="wsCat">类别</label><input id="ws_p_cat" placeholder="ETF"></div>
+        <div><label data-i18n="wsQty">数量</label><input id="ws_p_qty" type="number" step="any"></div>
+        <div><label data-i18n="wsCost">成本价</label><input id="ws_p_cost" type="number" step="any"></div>
+        <div><label data-i18n="wsPrice">现价</label><input id="ws_p_price" type="number" step="any"></div>
+        <button class="btn" style="justify-self:start;align-self:end" onclick="addWsPos()" data-i18n="wsPosAdd">加持仓</button>
+      </div>
+      <div class="grid" style="grid-template-columns:1fr auto auto">
+        <div><label data-i18n="wsCashL">现金余额 CAD</label><input id="ws_cash" type="number" step="0.01"></div>
+        <button class="btn" style="justify-self:start;align-self:end" onclick="saveWsCash()" data-i18n="wsCashSave">保存现金</button>
+        <button class="btn" style="justify-self:start;align-self:end" onclick="snapWs()" data-i18n="wsSnap">📌 存为今日快照</button>
+      </div>
+      <div style="font-size:12.5px;color:var(--muted);line-height:1.7" data-i18n-html="wsSnapGuide">改完持仓/现价后点<b style="color:var(--ink)">「存为今日快照」</b>，净值曲线才会多一个点（同一天再存＝覆盖当天）。净值＝持仓市值合计＋现金，自动算。</div>
+    </div>
+
+    <div class="sectionhead"><h2 style="font-size:17px" data-i18n="wsImportHead">导入 WS 报表</h2></div>
+    <div class="addrow">
+      <div style="font-size:12.5px;color:var(--muted);line-height:1.7" data-i18n-html="wsImportGuide"><b style="color:var(--red)">尚未开放</b> —— Wealthsimple <b>没有官方 API</b>，网上那些自动抓取的库要存你的账号密码＋2FA（券商凭据，本工具一律不碰，WS 也在封）。所以走 IBKR 同款「你导出、我解析」。<br><b style="color:var(--ink)">要开通它，请给一份样本：</b>WS 网页 → <b>Activity</b>（或 Documents → Statements）→ 导出 <b>CSV</b> → 把文件放到本机任意位置、把路径告诉 Claude。<b>格式我没见过，不会照猜写解析器</b>（猜错会把你的持仓/成本算错）；见到真样本当天就能接上。</div>
     </div>
   </section>
 
@@ -472,6 +530,34 @@ const I18N = {
   ibkrPos:{zh:'当前持仓',en:'Current positions'},
   ibkrTrades:{zh:'交易记录 · 已实现盈亏',en:'Trades · Realized P/L'},
   ibkrImport:{zh:'导入 IBKR 报表',en:'Import IBKR statement'},
+  wsHead:{zh:'Wealthsimple TFSA · 持仓 / 供款额度',en:'Wealthsimple TFSA · Holdings / Contribution room'},
+  wsNavChart:{zh:'净值曲线',en:'NAV curve'},
+  wsAlloc:{zh:'持仓配置',en:'Allocation'},
+  wsRoomHead:{zh:'TFSA 供款额度',en:'TFSA contribution room'},
+  wsRoomGuide:{zh:'<b style="color:var(--ink)">基准额度从哪来：</b>CRA <b>My Account → TFSA → Contribution room</b> 里那个数字才是权威的（本工具<b>不替你推算每年限额</b>——算错会害你超额，CRA 罚超出部分 <b>1%/月</b>）。填「该数字」＋「它对应的日期」（通常是 1 月 1 日），下面的流水会在此基准上加减。<br><b style="color:var(--ink)">取款的坑：</b>当年取款要到<b>下一个 1 月 1 日</b>才恢复额度，所以本年取款不计入可用额度。<br><b style="color:var(--ink)">每年 1 月记得回来更新基准</b>（新年度限额和去年取款的恢复都在 CRA 那个数里）。',en:'<b style="color:var(--ink)">Where the base comes from:</b> only the number in CRA <b>My Account → TFSA → Contribution room</b> is authoritative. This tool <b>will not guess the annual limits</b> for you — a wrong guess can push you over, and CRA charges <b>1%/month</b> on the excess. Enter that number plus the date it refers to (usually Jan 1); the flows below adjust from that base.<br><b style="color:var(--ink)">Withdrawal gotcha:</b> a withdrawal only restores room on the <b>next Jan 1</b>, so this year\'s withdrawals do not count toward available room.<br><b style="color:var(--ink)">Come back each January to refresh the base</b> (the new annual limit and last year\'s restored room are both baked into CRA\'s number).'},
+  wsRoomAmtL:{zh:'CRA 可用额度（CAD）',en:'CRA available room (CAD)'},
+  wsRoomAsofL:{zh:'该数字对应日期',en:'Date that number refers to'},
+  wsRoomSave:{zh:'保存基准',en:'Save base'},
+  wsFlowTypeL:{zh:'类型',en:'Type'},
+  wsContribute:{zh:'供款',en:'Contribution'},
+  wsWithdraw:{zh:'取款',en:'Withdrawal'},
+  wsFlowDateL:{zh:'日期',en:'Date'},
+  wsFlowAmtL:{zh:'金额 CAD',en:'Amount CAD'},
+  wsFlowNoteL:{zh:'备注（选填）',en:'Note (optional)'},
+  wsFlowAdd:{zh:'添加',en:'Add'},
+  wsPos:{zh:'当前持仓',en:'Current holdings'},
+  wsSym:{zh:'代码',en:'Symbol'},
+  wsCat:{zh:'类别',en:'Class'},
+  wsQty:{zh:'数量',en:'Qty'},
+  wsCost:{zh:'成本价',en:'Cost'},
+  wsPrice:{zh:'现价',en:'Price'},
+  wsPosAdd:{zh:'加持仓',en:'Add holding'},
+  wsCashL:{zh:'现金余额 CAD',en:'Cash balance CAD'},
+  wsCashSave:{zh:'保存现金',en:'Save cash'},
+  wsSnap:{zh:'📌 存为今日快照',en:'📌 Save today snapshot'},
+  wsSnapGuide:{zh:'改完持仓/现价后点<b style="color:var(--ink)">「存为今日快照」</b>，净值曲线才会多一个点（同一天再存＝覆盖当天）。净值＝持仓市值合计＋现金，自动算。',en:'After updating holdings/prices, click <b style="color:var(--ink)">Save today snapshot</b> to add a point to the NAV curve (saving twice the same day overwrites it). NAV = total market value + cash, computed automatically.'},
+  wsImportHead:{zh:'导入 WS 报表',en:'Import WS statement'},
+  wsImportGuide:{zh:'<b style="color:var(--red)">尚未开放</b> —— Wealthsimple <b>没有官方 API</b>，网上那些自动抓取的库要存你的账号密码＋2FA（券商凭据，本工具一律不碰，WS 也在封）。所以走 IBKR 同款「你导出、我解析」。<br><b style="color:var(--ink)">要开通它，请给一份样本：</b>WS 网页 → <b>Activity</b>（或 Documents → Statements）→ 导出 <b>CSV</b> → 把文件放到本机任意位置、把路径告诉 Claude。<b>格式我没见过，不会照猜写解析器</b>（猜错会把你的持仓/成本算错）；见到真样本当天就能接上。',en:'<b style="color:var(--red)">Not enabled yet</b> — Wealthsimple has <b>no official API</b>, and the unofficial scrapers need your login + 2FA (brokerage credentials — this tool never touches them, and WS blocks them anyway). So it follows the IBKR pattern: you export, it parses.<br><b style="color:var(--ink)">To enable it, provide a sample:</b> WS web → <b>Activity</b> (or Documents → Statements) → export <b>CSV</b> → save it anywhere locally and give Claude the path. <b>The format has not been seen, so no parser will be written from guesswork</b> (a wrong guess would corrupt your positions/cost basis); once a real sample exists it can be wired up the same day.'},
   ibkrGuide:{zh:'<b style="color:var(--ink)">怎么导出：</b>IBKR 网页 → <b>Performance &amp; Reports → Statements → Activity</b> → 期间选「月度」或自定义 → 下载 <b>CSV</b>。把文件选进来（或把内容全选粘贴）。每次导入追加一个净值快照并合并交易（自动去重）；多导几个月份就能看到净值曲线。数据只存进你的私有仓库，绝不进公开展示。',en:'<b style="color:var(--ink)">How to export:</b> IBKR web → <b>Performance &amp; Reports → Statements → Activity</b> → pick Monthly or a custom range → download <b>CSV</b>. Choose the file (or paste its full content). Each import adds one NAV snapshot and merges trades (deduped); import several months to draw the curve. Data goes only to your private repo — never to public display.'},
   ibkrPastePh:{zh:'或把 Activity Statement CSV 的全部内容粘贴到这里…',en:'…or paste the full Activity Statement CSV content here'},
   ibkrImportBtn:{zh:'解析并导入',en:'Parse & import'},
@@ -583,11 +669,12 @@ function setConn(ok){
 async function boot(){
   setConn(false);
   try{
-    const [inv,news,jobs,ibkr,books,conf]=await Promise.all([
+    const [inv,news,jobs,ibkr,ws,books,conf]=await Promise.all([
       ghGet('invest.json').catch(e=>{if(e.message==='AUTH')throw e;return {data:null,sha:null}}),
       ghGet('news.json').catch(()=>({data:null,sha:null})),
       ghGet('jobs.json').catch(()=>({data:null,sha:null})),
       ghGet('ibkr.json').catch(()=>({data:null,sha:null})),
+      ghGet('ws.json').catch(()=>({data:null,sha:null})),
       ghGet('books.json').catch(()=>({data:null,sha:null})),
       ghGet('config.json').catch(()=>({data:null,sha:null})),
     ]);
@@ -599,6 +686,8 @@ async function boot(){
     SHA.jobs    = jobs.sha;
     DATA.ibkr   = ibkr.data || {updated_at:'',snapshots:[],trades:[]};
     SHA.ibkr    = ibkr.sha;
+    DATA.ws     = ws.data || {updated_at:'',tfsa:{room_amount:null,room_asof:''},flows:[],positions:[],cash:null,snapshots:[],trades:[]};
+    SHA.ws      = ws.sha;
     DATA.books  = books.data || {updated_at:'',books:[],compendium:{updatedAt:'',sections:[]}};
     SHA.books   = books.sha;
     DATA.config = conf.data;   // null = 仓库里还没有 config.json（开关不可用）
@@ -635,6 +724,7 @@ function switchTab(tab){
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
   document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='view-'+tab));
   if(tab==='ibkr') renderIBKR();   // canvas 在隐藏状态下宽度为 0，切进来时重绘
+  if(tab==='ws') renderWS();       // 同上：canvas 必须在可见时才画
 }
 
 /* ---- 动态 ---- */
@@ -942,6 +1032,165 @@ function setupCanvas(cv){
   const ctx=cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,w,h);
   return {ctx,w,h};
 }
+/* ===== Wealthsimple TFSA =====
+   WS 没有官方 API；非官方抓取库要存账号密码+2FA（券商凭据——本工具一律不碰，WS 也在封）。
+   故与 IBKR 同套路：手动录入 + 报表导入（解析器等站长给真实样本，格式不猜）。
+   数据只写私有库 investment/ws.json —— Investment-Info 属 HUB-APPS §2「永不公开」名单。 */
+function wsCalc(p){
+  const value = (p.qty!=null && p.price!=null) ? p.qty*p.price : null;
+  const costBasis = (p.qty!=null && p.costPrice!=null) ? p.qty*p.costPrice : null;
+  return Object.assign({}, p, {value, costBasis, unreal:(value!=null&&costBasis!=null)?value-costBasis:null});
+}
+function wsPositions(){ return (DATA.ws.positions||[]).map(wsCalc); }
+function wsNav(){
+  const pos=wsPositions(); const c=DATA.ws.cash;
+  if(!pos.length && c==null) return null;
+  return pos.reduce((s,p)=>s+(p.value||0),0) + (c||0);
+}
+/* TFSA 额度计算。基准 = CRA My Account 的权威数字（不猜每年限额）。
+   规则：取款只在「下一个 1 月 1 日」恢复额度 → 当年取款不计入可用。
+   跨年后基准必然失效（缺新年度限额 + 去年取款的恢复），必须提示站长回 CRA 重取。 */
+function wsRoom(){
+  const t=(DATA.ws && DATA.ws.tfsa)||{};
+  if(t.room_amount==null || t.room_amount==='' || !t.room_asof) return null;
+  const base=+t.room_amount, Y=new Date().getFullYear(), asofY=+String(t.room_asof).slice(0,4);
+  let used=0, restored=0, pending=0;
+  (DATA.ws.flows||[]).filter(f=>String(f.date)>=String(t.room_asof)).forEach(f=>{
+    const a=+f.amount||0;
+    if(f.type==='contribute') used+=a;
+    else if(+String(f.date).slice(0,4) < Y) restored+=a;   // 已跨年 → 额度已恢复
+    else pending+=a;                                        // 本年取款 → 明年 1/1 才恢复
+  });
+  return {base, used, restored, pending, available:base-used+restored, stale:asofY<Y, asof:t.room_asof};
+}
+async function wsSave(msg){
+  DATA.ws.updated_at=new Date().toISOString();
+  try{ SHA.ws=await ghPut('ws.json', DATA.ws, SHA.ws, msg); return true; }
+  catch(e){ toast(T('保存失败: ','Save failed: ')+e.message,true); return false; }
+}
+async function saveWsRoom(){
+  const amt=$('ws_room_amt').value, asof=$('ws_room_asof').value;
+  if(amt===''||!asof){ toast(T('额度和日期都要填','Enter both amount and date'),true); return; }
+  DATA.ws.tfsa={room_amount:+amt, room_asof:asof};
+  if(await wsSave('data: set TFSA room base '+asof)){ renderWS(); toast(T('基准已保存','Base saved')); }
+}
+async function addWsFlow(){
+  const type=$('ws_f_type').value, date=$('ws_f_date').value, amt=$('ws_f_amt').value;
+  if(!date||amt===''){ toast(T('日期和金额必填','Date and amount required'),true); return; }
+  if(+amt<=0){ toast(T('金额要大于 0（取款也填正数，类型选「取款」）','Amount must be > 0 (withdrawals are positive too — pick type "Withdrawal")'),true); return; }
+  DATA.ws.flows=DATA.ws.flows||[];
+  DATA.ws.flows.push({id:uid(), date, type, amount:+amt, note:$('ws_f_note').value||''});
+  DATA.ws.flows.sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+  if(await wsSave('data: add TFSA '+type+' '+date)){
+    $('ws_f_amt').value=''; $('ws_f_note').value='';
+    renderWS(); toast(T('已添加','Added'));
+  }
+}
+async function delWsFlow(id){
+  if(!confirm(T('删除这笔流水？','Delete this flow?'))) return;
+  DATA.ws.flows=(DATA.ws.flows||[]).filter(f=>f.id!==id);
+  if(await wsSave('data: delete TFSA flow')){ renderWS(); }
+}
+async function addWsPos(){
+  const sym=($('ws_p_sym').value||'').trim();
+  if(!sym){ toast(T('代码必填','Symbol required'),true); return; }
+  const q=$('ws_p_qty').value, c=$('ws_p_cost').value, pr=$('ws_p_price').value;
+  DATA.ws.positions=DATA.ws.positions||[];
+  DATA.ws.positions.push({id:uid(), symbol:sym, cat:($('ws_p_cat').value||'').trim(), cur:'CAD',
+    qty:q===''?null:+q, costPrice:c===''?null:+c, price:pr===''?null:+pr});
+  if(await wsSave('data: add WS holding '+sym)){
+    ['ws_p_sym','ws_p_cat','ws_p_qty','ws_p_cost','ws_p_price'].forEach(i=>$(i).value='');
+    renderWS(); toast(T('已加持仓','Holding added'));
+  }
+}
+async function delWsPos(id){
+  if(!confirm(T('删除这个持仓？','Delete this holding?'))) return;
+  DATA.ws.positions=(DATA.ws.positions||[]).filter(p=>p.id!==id);
+  if(await wsSave('data: delete WS holding')){ renderWS(); }
+}
+async function editWsPrice(id){
+  const p=(DATA.ws.positions||[]).find(x=>x.id===id); if(!p) return;
+  const v=prompt(T('更新现价 — ','Update price — ')+p.symbol, p.price==null?'':p.price);
+  if(v===null) return;
+  p.price = v===''?null:+v;
+  if(await wsSave('data: update WS price '+p.symbol)){ renderWS(); }
+}
+async function saveWsCash(){
+  const v=$('ws_cash').value;
+  DATA.ws.cash = v===''?null:+v;
+  if(await wsSave('data: set WS cash')){ renderWS(); toast(T('现金已保存','Cash saved')); }
+}
+async function snapWs(){
+  const pos=wsPositions(), nav=wsNav();
+  if(nav==null){ toast(T('先录入持仓或现金','Add holdings or cash first'),true); return; }
+  const date=new Date().toISOString().slice(0,10);
+  const snap={date, nav, cash:DATA.ws.cash, positions:pos.map(p=>({symbol:p.symbol,cat:p.cat,cur:p.cur,qty:p.qty,costPrice:p.costPrice,costBasis:p.costBasis,price:p.price,value:p.value,unreal:p.unreal}))};
+  DATA.ws.snapshots=DATA.ws.snapshots||[];
+  const i=DATA.ws.snapshots.findIndex(x=>x.date===date);
+  if(i>=0) DATA.ws.snapshots[i]=snap; else DATA.ws.snapshots.push(snap);   // 同日＝覆盖
+  DATA.ws.snapshots.sort((a,b)=>a.date.localeCompare(b.date));
+  if(await wsSave('data: WS snapshot '+date)){ renderWS(); toast(T('已存快照 '+date,'Snapshot saved '+date)); }
+}
+function renderWS(){
+  const d=DATA.ws; if(!d || !$('ws-stats')) return;
+  const pos=wsPositions(), nav=wsNav(), room=wsRoom();
+  const unreal=pos.reduce((s,p)=>s+(p.unreal||0),0), hasU=pos.some(p=>p.unreal!=null);
+  $('ws-updated').textContent = d.updated_at ? T('更新于 ','Updated ')+d.updated_at.slice(0,16).replace('T',' ')
+    : T('尚无数据 — 在下方录入持仓或设置 TFSA 基准额度','No data — add holdings or set your TFSA base below');
+  $('ws-stats').innerHTML=`
+    <div class="stat"><div class="k">${T('净值 NAV','NAV')}</div><div class="v" style="font-size:21px">${nav==null?'—':fmt(nav)}</div></div>
+    <div class="stat"><div class="k">${T('现金','Cash')}</div><div class="v" style="font-size:21px">${d.cash==null?'—':fmt(d.cash)}</div></div>
+    <div class="stat"><div class="k">${T('浮动盈亏','Unrealized P/L')}</div><div class="v" style="font-size:21px;color:${unreal>=0?'var(--green)':'var(--red)'}">${hasU?(unreal>=0?'+':'')+fmt(unreal):'—'}</div></div>
+    <div class="stat"><div class="k">${T('TFSA 剩余额度','TFSA room left')}</div><div class="v" style="font-size:21px;color:${room?(room.available<0?'var(--red)':'var(--green)'):'inherit'}">${room?fmt(room.available):'—'}</div></div>
+    <div class="stat"><div class="k">${T('持仓数','Holdings')}</div><div class="v">${pos.length}</div></div>`;
+
+  const hasNav=drawNavChart($('ws-nav-chart'), d.snapshots||[]);
+  $('ws-nav-note').textContent = !hasNav ? T('存快照后显示','Shows after you save a snapshot')
+    : (d.snapshots||[]).filter(s=>s.nav!=null).length===1 ? T('之后每次更新完点「存为今日快照」，就会连成曲线','Save a snapshot after each update to draw the curve') : '';
+  drawAllocChart($('ws-alloc-chart'), pos);
+
+  // TFSA 额度
+  if(!room){
+    $('ws-room-note').textContent=T('未设置基准 — 去 CRA My Account 抄那个数字','No base set — copy the number from CRA My Account');
+  }else{
+    const bits=[T('基准 ','Base ')+room.asof+'：'+fmt(room.base),
+                T('已供款 ','Contributed ')+fmt(room.used),
+                room.restored?T('已恢复 ','Restored ')+fmt(room.restored):null,
+                room.pending?T('本年取款 ','Withdrawn this year ')+fmt(room.pending)+T('（明年 1/1 才恢复）',' (restores next Jan 1)'):null].filter(Boolean);
+    $('ws-room-note').innerHTML=esc(bits.join(' · '))
+      + (room.stale?` <span style="color:var(--red)">⚠️ ${T('基准是 '+room.asof.slice(0,4)+' 年的，今年请回 CRA 更新（新年度限额未计入）','Base is from '+room.asof.slice(0,4)+' — refresh it at CRA (this year\'s new limit is not included)')}</span>`:'')
+      + (room.available<0?` <span style="color:var(--red)">⚠️ ${T('已超额！CRA 对超出部分按 1%/月罚','Over-contributed! CRA charges 1%/month on the excess')}</span>`:'');
+    if($('ws_room_amt').value==='') $('ws_room_amt').value=room.base;
+    if($('ws_room_asof').value==='') $('ws_room_asof').value=room.asof;
+  }
+  const ft=$('ws-flow-tbl'), flows=d.flows||[];
+  if(!flows.length) ft.innerHTML=`<tr><td style="color:var(--muted);font-family:var(--mono);font-size:12px;border:none">${T('还没有供款/取款记录','No contributions or withdrawals yet')}</td></tr>`;
+  else ft.innerHTML=`<tr><th>${T('日期','Date')}</th><th>${T('类型','Type')}</th><th>${T('金额','Amount')}</th><th>${T('备注','Note')}</th><th></th></tr>`+
+    flows.map(f=>`<tr><td style="font-family:var(--mono)">${esc(f.date)}</td>
+      <td style="color:${f.type==='contribute'?'var(--green)':'var(--red)'}">${f.type==='contribute'?T('供款','Contribution'):T('取款','Withdrawal')}</td>
+      <td class="num">${f.type==='contribute'?'+':'−'}${fmt(f.amount)}</td>
+      <td style="color:var(--muted)">${esc(f.note||'')}</td>
+      <td><button class="iconbtn" onclick="delWsFlow('${f.id}')">${T('删除','Delete')}</button></td></tr>`).join('');
+
+  // 持仓
+  const snaps=d.snapshots||[];
+  $('ws-pos-note').textContent = snaps.length ? T('最近快照 ','Last snapshot ')+snaps[snaps.length-1].date : T('尚未存过快照','No snapshot yet');
+  const pt=$('ws-pos-tbl');
+  if(!pos.length) pt.innerHTML=`<tr><td style="color:var(--muted);font-family:var(--mono);font-size:12px;border:none">${T('暂无持仓 — 在下方添加','No holdings — add one below')}</td></tr>`;
+  else pt.innerHTML=`<tr><th>${T('代码','Symbol')}</th><th>${T('类别','Class')}</th><th>${T('数量','Qty')}</th><th>${T('成本价','Cost')}</th><th>${T('现价','Price')}</th><th>${T('市值','Value')}</th><th>${T('浮动盈亏','Unreal. P/L')}</th><th>%</th><th></th></tr>`+
+    [...pos].sort((a,b)=>(b.value||0)-(a.value||0)).map(p=>{
+      const pct=p.costBasis?(p.unreal/p.costBasis*100):null;
+      return `<tr><td style="font-family:var(--mono)">${esc(p.symbol)}</td><td style="color:var(--muted)">${esc(p.cat||'')}</td>
+        <td class="num">${fmt(p.qty)}</td><td class="num">${fmt(p.costPrice)}</td>
+        <td class="num"><a href="javascript:void(0)" onclick="editWsPrice('${p.id}')" style="color:inherit;text-decoration:underline dotted" title="${T('点击更新现价','Click to update price')}">${p.price==null?T('未填','—'):fmt(p.price)}</a></td>
+        <td class="num">${fmt(p.value)}</td>
+        <td class="num" style="color:${(p.unreal||0)>=0?'var(--green)':'var(--red)'}">${p.unreal==null?'—':(p.unreal>=0?'+':'')+fmt(p.unreal)}</td>
+        <td class="num" style="color:${(pct||0)>=0?'var(--green)':'var(--red)'}">${pct==null?'—':(pct>=0?'+':'')+pct.toFixed(1)+'%'}</td>
+        <td><button class="iconbtn" onclick="delWsPos('${p.id}')">${T('删除','Delete')}</button></td></tr>`;
+    }).join('');
+  if($('ws_cash').value==='' && d.cash!=null) $('ws_cash').value=d.cash;
+}
+
 function drawNavChart(cv, snaps){
   const {ctx,w,h}=setupCanvas(cv);
   const pts=snaps.filter(s=>s.nav!=null).map(s=>({x:s.date,y:s.nav}));
