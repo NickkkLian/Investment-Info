@@ -1,0 +1,2293 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>情报终端 · Intelligence Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0e0f0c; --panel:#16170f; --panel2:#1c1d14;
+    --ink:#ece7d6; --muted:#8d8a78; --line:#2c2c20;
+    --amber:#e0aa3e; --amber-dim:#9a7a32; --green:#7fae6a; --red:#c9695a; --blue:#6f93b8;
+    --mono:'IBM Plex Mono',monospace; --sans:'IBM Plex Sans',sans-serif; --serif:'Fraunces',serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--bg); color:var(--ink); font-family:var(--sans);
+    font-size:15px; line-height:1.55; -webkit-font-smoothing:antialiased;
+    background-image:
+      radial-gradient(1200px 600px at 80% -10%, rgba(224,170,62,.07), transparent 60%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.025'/%3E%3C/svg%3E");
+  }
+  a{color:var(--amber)}
+  .wrap{max-width:1040px;margin:0 auto;padding:0 18px}
+
+  /* header */
+  header{border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20;
+    background:rgba(14,15,12,.92);backdrop-filter:blur(8px)}
+  .top{display:flex;align-items:baseline;justify-content:space-between;padding:16px 0 10px;gap:12px;flex-wrap:wrap}
+  .brand{font-family:var(--serif);font-weight:600;font-size:26px;letter-spacing:.3px}
+  .brand .dot{color:var(--amber)}
+  .brand small{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;display:block;margin-top:-2px}
+  .status{font-family:var(--mono);font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .status .pill{display:inline-flex;align-items:center;gap:6px}
+  .led{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
+  .led.off{background:var(--red);box-shadow:0 0 8px var(--red)}
+  .iconbtn{background:none;border:1px solid var(--line);color:var(--muted);font-family:var(--mono);
+    font-size:11px;padding:5px 9px;border-radius:6px;cursor:pointer;letter-spacing:.5px}
+  .iconbtn:hover{color:var(--ink);border-color:var(--amber-dim)}
+
+  nav{display:flex;gap:2px;padding-bottom:0}
+  nav button{background:none;border:none;color:var(--muted);font-family:var(--mono);font-size:12.5px;
+    letter-spacing:1px;text-transform:uppercase;padding:11px 16px;cursor:pointer;border-bottom:2px solid transparent}
+  nav button:hover{color:var(--ink)}
+  nav button.active{color:var(--amber);border-bottom-color:var(--amber)}
+
+  main{padding:26px 0 80px}
+  .view{display:none;animation:fade .4s ease}
+  .view.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  .sectionhead{display:flex;align-items:baseline;justify-content:space-between;margin:0 0 16px;flex-wrap:wrap;gap:8px}
+  .sectionhead h2{font-family:var(--serif);font-weight:600;font-size:21px}
+  .sectionhead .meta{font-family:var(--mono);font-size:11px;color:var(--muted)}
+
+  /* cards */
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin-bottom:12px}
+  .news-item{display:flex;gap:14px;align-items:flex-start}
+  .news-item .imp{font-family:var(--mono);font-size:10px;width:34px;flex:none;text-align:center;
+    border:1px solid var(--line);border-radius:5px;padding:3px 0;color:var(--amber)}
+  .news-item h3{font-size:16px;font-weight:600;margin-bottom:5px;line-height:1.35}
+  .news-item h3 a{color:var(--ink);text-decoration:none}
+  .news-item h3 a:hover{color:var(--amber)}
+  .news-item p{color:#c7c2b1;font-size:14px}
+  .tagrow{display:flex;gap:8px;margin-top:9px;font-family:var(--mono);font-size:10.5px;color:var(--muted);flex-wrap:wrap}
+  .chip{border:1px solid var(--line);padding:2px 7px;border-radius:4px}
+  .chip.ai{color:var(--blue);border-color:#33455a}
+  .chip.fin{color:var(--green);border-color:#3a4a31}
+
+  .filterbar{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+  .filterbar button{font-family:var(--mono);font-size:11px;background:var(--panel);border:1px solid var(--line);
+    color:var(--muted);padding:5px 11px;border-radius:6px;cursor:pointer}
+  .filterbar button.on{color:var(--bg);background:var(--amber);border-color:var(--amber)}
+
+  /* tables */
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th{font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);
+    text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);font-weight:500}
+  td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+  td.num{font-family:var(--mono);text-align:right}
+  tr:hover td{background:var(--panel2)}
+  .del{color:var(--red);cursor:pointer;font-family:var(--mono);font-size:11px;opacity:.6}
+  .del:hover{opacity:1}
+  .pubtog{cursor:pointer;color:var(--muted);font-family:var(--mono);font-size:14px;user-select:none;white-space:nowrap}
+  .pubtog:hover{color:var(--amber-dim)}
+  .pubtog.on{color:var(--amber)}
+  .tablewrap{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow-x:auto;margin-bottom:14px}
+
+  /* stats */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:18px}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  .stat .k{font-family:var(--mono);font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+  .stat .v{font-family:var(--serif);font-size:25px;font-weight:600;margin-top:4px}
+
+  /* forms */
+  .addrow{display:grid;gap:8px;margin-bottom:14px;background:var(--panel2);border:1px solid var(--line);
+    border-radius:10px;padding:14px}
+  .addrow .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+  input,select,textarea{background:#0c0d0a;border:1px solid var(--line);color:var(--ink);font-family:var(--sans);
+    font-size:13.5px;padding:8px 10px;border-radius:6px;width:100%}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--amber-dim)}
+  textarea{resize:vertical;min-height:62px;font-family:var(--sans)}
+  label{font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:3px}
+  .btn{background:var(--amber);color:#1a1606;border:none;font-family:var(--mono);font-size:12px;font-weight:600;
+    letter-spacing:.5px;padding:9px 16px;border-radius:7px;cursor:pointer}
+  .btn:hover{background:#eab94d}
+  .btn.ghost{background:none;color:var(--muted);border:1px solid var(--line)}
+  .btn.ghost:hover{color:var(--ink)}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .savebar{display:flex;align-items:center;gap:12px;margin-top:6px}
+  .dirty{font-family:var(--mono);font-size:11px;color:var(--amber)}
+
+  .plan{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--amber-dim);
+    border-radius:8px;padding:14px 16px;margin-bottom:10px}
+  .plan .ph{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+  .plan h4{font-family:var(--serif);font-size:17px;font-weight:600}
+  .plan .pd{font-family:var(--mono);font-size:11px;color:var(--muted)}
+  .plan p{white-space:pre-wrap;margin-top:6px;color:#c7c2b1;font-size:14px}
+
+  .empty{color:var(--muted);font-family:var(--mono);font-size:12.5px;text-align:center;padding:40px 0;
+    border:1px dashed var(--line);border-radius:10px}
+
+  .bars{display:flex;flex-direction:column;gap:7px;margin-top:6px}
+  .bar{display:grid;grid-template-columns:130px 1fr 42px;align-items:center;gap:10px;font-size:13px}
+  .bar .name{font-family:var(--mono);font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bar .track{height:9px;background:#0c0d0a;border-radius:5px;overflow:hidden;border:1px solid var(--line)}
+  .bar .fill{height:100%;background:linear-gradient(90deg,var(--amber-dim),var(--amber))}
+  .bar .ct{font-family:var(--mono);font-size:11px;color:var(--ink);text-align:right}
+
+  .analysis{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin-bottom:18px}
+  .analysis h3{font-family:var(--serif);font-size:18px;margin-bottom:8px}
+  .analysis p{white-space:pre-wrap;color:#c7c2b1}
+  .signal{display:flex;gap:9px;margin-top:8px;font-size:14px}
+  .signal::before{content:"▸";color:var(--amber)}
+
+  /* setup gate */
+  .gate{position:fixed;inset:0;background:var(--bg);z-index:50;display:flex;align-items:center;justify-content:center;padding:20px}
+  .gate .box{max-width:440px;width:100%;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:30px}
+  .gate h1{font-family:var(--serif);font-size:27px;margin-bottom:6px}
+  .gate h1 .dot{color:var(--amber)}
+  .gate .sub{color:var(--muted);font-size:13.5px;margin-bottom:22px;line-height:1.6}
+  .gate .field{margin-bottom:14px}
+  .gate .hint{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-top:5px;line-height:1.5}
+  .gate .err{color:var(--red);font-family:var(--mono);font-size:12px;margin-top:12px;min-height:16px}
+  .secure{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-top:18px;padding-top:16px;border-top:1px solid var(--line);line-height:1.6}
+  .secure b{color:var(--green)}
+
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);
+    background:var(--panel2);border:1px solid var(--amber-dim);color:var(--ink);font-family:var(--mono);
+    font-size:12.5px;padding:11px 18px;border-radius:8px;z-index:60;transition:transform .3s ease;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+  .toast.err{border-color:var(--red)}
+
+  /* IBKR charts */
+  .charts2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+  @media(max-width:720px){.charts2{grid-template-columns:1fr}}
+  .charthead{font-family:var(--mono);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px}
+  .charts2 canvas{width:100%;height:190px;display:block}
+
+  /* Books / compendium */
+  .bookrow{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);
+    border-radius:10px;padding:12px 16px;margin-bottom:8px;flex-wrap:wrap}
+  .bookrow .bt{font-family:var(--serif);font-size:16.5px;font-weight:600}
+  .bookrow .ba{color:var(--muted);font-size:12.5px}
+  .bookrow .bmeta{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-left:auto;display:flex;gap:10px;align-items:center}
+  .bookrow.feeding{border-color:var(--amber-dim)}
+  .comp-sec{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin-bottom:12px}
+  .comp-sec h3{font-family:var(--serif);font-size:18px;margin-bottom:10px;color:var(--amber)}
+  .comp-point{padding:8px 0;border-bottom:1px dashed var(--line);font-size:14px;line-height:1.65;color:#d9d4c3}
+  .comp-point:last-child{border-bottom:none}
+  .comp-point .srcs{margin-top:4px;display:flex;gap:6px;flex-wrap:wrap}
+  .comp-point .srcs span{font-family:var(--mono);font-size:10px;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:1px 6px}
+  .comp-point img{max-width:min(480px,100%);border-radius:8px;border:1px solid var(--line);margin-top:8px;display:block}
+</style>
+</head>
+<body>
+
+<!-- ============ SETUP GATE ============ -->
+<div class="gate" id="gate">
+  <div class="box">
+    <h1><span data-i18n="brand">情报终端</span><span class="dot">.</span></h1>
+    <div class="sub" data-i18n="gateSub">连接你的私有数据仓库。凭据只保存在本机浏览器，永远不会写入网页代码或上传到别处。</div>
+    <div class="field">
+      <label data-i18n="gl_owner">GitHub 用户名 / 组织 (owner)</label>
+      <input id="g_owner" data-i18n-ph="ph_owner" placeholder="例如 your-name" autocomplete="off">
+    </div>
+    <div class="field">
+      <label data-i18n="gl_repo">私有仓库名 (repo)</label>
+      <input id="g_repo" data-i18n-ph="ph_grepo" placeholder="例如 my-databases" autocomplete="off">
+      <div class="hint" data-i18n="gh_repo">数据将读写该仓库的 investment/ 文件夹</div>
+    </div>
+    <div class="field">
+      <label>Fine-grained PAT</label>
+      <input id="g_token" type="password" placeholder="github_pat_..." autocomplete="off">
+      <div class="hint" data-i18n="gh_token">权限只需该仓库的 Contents: Read &amp; Write</div>
+    </div>
+    <button class="btn" style="width:100%;margin-top:6px" onclick="saveSetup()" data-i18n="gateConnect">连接</button>
+    <div class="err" id="g_err"></div>
+    <div class="secure" data-i18n-html="gateSecure"><b>为什么这样安全:</b> 本站是纯静态页面，没有后端。你的 token 仅存于此设备的 localStorage，仅用于浏览器直连 GitHub API 读写你的私有数据。任何打开本站的其他人都看不到、也用不了你的 token。</div>
+  </div>
+</div>
+
+<!-- ============ APP ============ -->
+<header>
+  <div class="wrap">
+    <div class="top">
+      <div class="brand"><span data-i18n="brand">情报终端</span><span class="dot">.</span><small>Intelligence Desk</small></div>
+      <div class="status">
+        <span class="pill"><span class="led" id="led"></span><span id="connlabel" data-i18n="notConnected">未连接</span></span>
+        <span class="pill" id="syncinfo">—</span>
+        <button class="iconbtn" onclick="reloadAll()" data-i18n="refresh">刷新</button>
+        <button class="iconbtn" id="langBtn" onclick="toggleLang()" title="中 / EN">EN</button>
+        <button class="iconbtn" onclick="openSettings()" data-i18n="settings">设置</button>
+      </div>
+    </div>
+    <nav>
+      <button class="active" data-tab="news" onclick="switchTab('news')" data-i18n="nav_news">动态</button>
+      <button data-tab="invest" onclick="switchTab('invest')" data-i18n="nav_invest">投资</button>
+      <button data-tab="ibkr" onclick="switchTab('ibkr')">IBKR</button>
+      <button data-tab="ws" onclick="switchTab('ws')">Wealthsimple</button>
+      <button data-tab="rb" onclick="switchTab('rb')" data-i18n="nav_rb">调仓</button>
+      <button data-tab="books" onclick="switchTab('books')" data-i18n="nav_books">书库</button>
+      <button data-tab="trends" onclick="switchTab('trends')" data-i18n="nav_trends">趋势</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- NEWS -->
+  <section class="view active" id="view-news">
+    <div class="sectionhead">
+      <h2 data-i18n="newsHead">行业动态 · 金融 &amp; AI</h2>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="meta" id="news-updated">—</div>
+        <button class="iconbtn" id="fetchTog" onclick="toggleFetch()" data-i18n-title="fetchTogT" title="开/关定时抓取（GitHub Actions 每周一、四自动抓取动态与招聘趋势；关闭后定时任务直接跳过，不消耗 API）">抓取: —</button>
+      </div>
+    </div>
+    <div class="filterbar" id="news-filter">
+      <button class="on" data-c="all" onclick="setNewsFilter('all',this)" data-i18n="nf_all">全部</button>
+      <button data-c="AI" onclick="setNewsFilter('AI',this)">AI</button>
+      <button data-c="金融" onclick="setNewsFilter('金融',this)" data-i18n="nf_finance">金融</button>
+      <button data-c="其他" onclick="setNewsFilter('其他',this)" data-i18n="nf_other">其他</button>
+    </div>
+    <div id="news-list"></div>
+  </section>
+
+  <!-- INVEST -->
+  <section class="view" id="view-invest">
+    <div class="sectionhead">
+      <h2 data-i18n="investHead">个人投资 · 分析 / 计划 / 记录</h2>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="meta" id="invest-updated">—</div>
+        <button class="iconbtn" onclick="exportPublic()" data-i18n="exportBtn" data-i18n-title="exportBtnT" title="把勾选了「公开展示」的条目导出为 invest.public.json">导出展示数据</button>
+      </div>
+    </div>
+
+    <div class="stats" id="invest-stats"></div>
+
+    <!-- holdings -->
+    <div class="sectionhead"><h2 style="font-size:17px" data-i18n="secHoldings">持仓</h2></div>
+    <div class="addrow">
+      <div class="grid">
+        <div><label data-i18n="l_name">名称</label><input id="h_name" data-i18n-ph="ph_hname" placeholder="苹果"></div>
+        <div><label data-i18n="l_ticker">代码</label><input id="h_ticker" placeholder="AAPL"></div>
+        <div><label data-i18n="l_type">类型</label><select id="h_type"><option value="股票" data-i18n="ty_stock">股票</option><option value="ETF">ETF</option><option value="加密" data-i18n="ty_crypto">加密</option><option value="基金" data-i18n="ty_fund">基金</option><option value="现金" data-i18n="ty_cash">现金</option><option value="其他" data-i18n="ty_other">其他</option></select></div>
+        <div><label data-i18n="l_qty">数量</label><input id="h_qty" type="number" step="any" placeholder="10"></div>
+        <div><label data-i18n="l_cost">成本价</label><input id="h_cost" type="number" step="any" placeholder="150"></div>
+        <div><label data-i18n="l_price">现价(选填)</label><input id="h_price" type="number" step="any" placeholder="180"></div>
+        <div><label data-i18n="l_cur">币种</label><input id="h_cur" placeholder="USD" value="USD"></div>
+      </div>
+      <div><label data-i18n="l_note">备注</label><input id="h_note" data-i18n-ph="ph_hnote" placeholder="长期持有 / 论点…"></div>
+      <button class="btn" style="justify-self:start" onclick="addHolding()" data-i18n="addHolding">+ 添加持仓</button>
+    </div>
+    <div class="tablewrap"><table id="holdings-tbl"></table></div>
+
+    <!-- transactions -->
+    <div class="sectionhead"><h2 style="font-size:17px" data-i18n="secTxns">交易记录</h2></div>
+    <div class="addrow">
+      <div class="grid">
+        <div><label data-i18n="l_date">日期</label><input id="t_date" type="date"></div>
+        <div><label data-i18n="l_dir">方向</label><select id="t_action"><option value="买入" data-i18n="ac_buy">买入</option><option value="卖出" data-i18n="ac_sell">卖出</option></select></div>
+        <div><label data-i18n="l_name">名称</label><input id="t_name" data-i18n-ph="ph_hname" placeholder="苹果"></div>
+        <div><label data-i18n="l_ticker">代码</label><input id="t_ticker" placeholder="AAPL"></div>
+        <div><label data-i18n="l_qty">数量</label><input id="t_qty" type="number" step="any"></div>
+        <div><label data-i18n="l_priceT">价格</label><input id="t_price" type="number" step="any"></div>
+        <div><label data-i18n="l_fee">费用</label><input id="t_fee" type="number" step="any" placeholder="0"></div>
+      </div>
+      <div><label data-i18n="l_note">备注</label><input id="t_note" data-i18n-ph="ph_tnote" placeholder="原因 / 触发条件…"></div>
+      <button class="btn" style="justify-self:start" onclick="addTxn()" data-i18n="addTxn">+ 记一笔</button>
+    </div>
+    <div class="tablewrap"><table id="txn-tbl"></table></div>
+
+    <!-- plans -->
+    <div class="sectionhead"><h2 style="font-size:17px" data-i18n="secPlans">计划 &amp; 复盘</h2></div>
+    <div class="addrow">
+      <div class="grid" style="grid-template-columns:160px 1fr">
+        <div><label data-i18n="l_date">日期</label><input id="p_date" type="date"></div>
+        <div><label data-i18n="l_title">标题</label><input id="p_title" data-i18n-ph="ph_ptitle" placeholder="Q3 配置思路 / 减仓决策…"></div>
+      </div>
+      <div><label data-i18n="l_body">内容</label><textarea id="p_body" data-i18n-ph="ph_pbody" placeholder="论点、目标价、仓位计划、风险、复盘…"></textarea></div>
+      <button class="btn" style="justify-self:start" onclick="addPlan()" data-i18n="addPlan">+ 添加</button>
+    </div>
+    <div id="plans-list"></div>
+
+    <div class="savebar">
+      <span class="dirty" id="dirty" data-i18n="saveIdle">自动保存已开启</span>
+      <button class="btn ghost" id="savebtn" onclick="commitInvest(true)" data-i18n="saveNow">立即保存</button>
+    </div>
+  </section>
+
+  <!-- IBKR -->
+  <section class="view" id="view-ibkr">
+    <div class="sectionhead">
+      <h2 data-i18n="ibkrHead">IBKR 组合 · 持仓 / 交易 / 盈亏</h2>
+      <div class="meta" id="ibkr-updated">—</div>
+    </div>
+    <div class="stats" id="ibkr-stats"></div>
+    <div class="charts2">
+      <div class="card"><h3 class="charthead" data-i18n="ibkrNavChart">净值曲线</h3><canvas id="ibkr-nav-chart"></canvas><div class="meta" id="ibkr-nav-note"></div></div>
+      <div class="card"><h3 class="charthead" data-i18n="ibkrAlloc">持仓配置</h3><canvas id="ibkr-alloc-chart"></canvas><div class="meta" id="ibkr-alloc-note"></div></div>
+    </div>
+    <div class="sectionhead"><h2 style="font-size:17px" data-i18n="ibkrPos">当前持仓</h2><div class="meta" id="ibkr-pos-date"></div></div>
+    <div class="tablewrap"><table id="ibkr-pos-tbl"></table></div>
+    <div class="sectionhead"><h2 style="font-size:17px" data-i18n="ibkrTrades">交易记录 · 已实现盈亏</h2></div>
+    <div class="tablewrap"><table id="ibkr-trades-tbl"></table></div>
+    <div class="sectionhead"><h2 style="font-size:17px" data-i18n="ibkrImport">导入 IBKR 报表</h2></div>
+    <div class="addrow">
+      <div style="font-size:12.5px;color:var(--muted);line-height:1.7" data-i18n-html="ibkrGuide"><b style="color:var(--ink)">怎么导出：</b>IBKR 网页 → <b>Performance &amp; Reports → Statements → Activity</b> → 期间选「月度」或自定义 → 下载 <b>CSV</b>。把文件选进来（或把内容全选粘贴）。每次导入追加一个净值快照并合并交易（自动去重）；多导几个月份就能看到净值曲线。数据只存进你的私有仓库，绝不进公开展示。</div>
+      <input type="file" id="ibkr-file" accept=".csv,text/csv">
+      <textarea id="ibkr-paste" data-i18n-ph="ibkrPastePh" placeholder="或把 Activity Statement CSV 的全部内容粘贴到这里…" style="min-height:80px;font-family:var(--mono);font-size:11px"></textarea>
+      <button class="btn" style="justify-self:start" onclick="importIBKR()" data-i18n="ibkrImportBtn">解析并导入</button>
+    </div>
+  </section>
+
+  <!-- WEALTHSIMPLE (TFSA) -->
+  <section class="view" id="view-ws">
+    <div class="sectionhead">
+      <h2 data-i18n="wsHead">Wealthsimple TFSA · 持仓 / 供款额度</h2>
+      <div class="meta" id="ws-updated">—</div>
+    </div>
+    <div class="stats" id="ws-stats"></div>
+    <div class="charts2">
+      <div class="card"><h3 class="charthead" data-i18n="wsNavChart">净值曲线</h3><canvas id="ws-nav-chart"></canvas><div class="meta" id="ws-nav-note"></div></div>
+      <div class="card"><h3 class="charthead" data-i18n="wsAlloc">持仓配置</h3><canvas id="ws-alloc-chart"></canvas></div>
+    </div>
+
+    <div class="sectionhead"><h2 style="font-size:17px" data-i18n="wsRoomHead">TFSA 供款额度</h2><div class="meta" id="ws-room-note"></div></div>
+    <div class="addrow">
+      <div style="font-size:12.5px;color:var(--muted);line-height:1.7" data-i18n-html="wsRoomGuide"><b style="color:var(--ink)">基准额度从哪来：</b>CRA <b>My Account → TFSA → Contribution room</b> 里那个数字才是权威的（本工具<b>不替你推算每年限额</b>——算错会害你超额，CRA 罚超出部分 <b>1%/月</b>）。填「该数字」＋「它对应的日期」（通常是 1 月 1 日），下面的流水会在此基准上加减。<br><b style="color:var(--ink)">取款的坑：</b>当年取款要到<b>下一个 1 月 1 日</b>才恢复额度，所以本年取款不计入可用额度。<br><b style="color:var(--ink)">每年 1 月记得回来更新基准</b>（新年度限额和去年取款的恢复都在 CRA 那个数里）。</div>
+      <div class="grid" style="grid-template-columns:1fr 1fr auto">
+        <div><label data-i18n="wsRoomAmtL">CRA 可用额度（CAD）</label><input id="ws_room_amt" type="number" step="0.01" placeholder="7000"></div>
+        <div><label data-i18n="wsRoomAsofL">该数字对应日期</label><input id="ws_room_asof" type="date"></div>
+        <button class="btn" style="justify-self:start;align-self:end" onclick="saveWsRoom()" data-i18n="wsRoomSave">保存基准</button>
+      </div>
+    </div>
+    <div class="tablewrap"><table id="ws-flow-tbl"></table></div>
+    <div class="addrow">
+      <div class="grid" style="grid-template-columns:auto 1fr 1fr 2fr auto">
+        <div><label data-i18n="wsFlowTypeL">类型</label><select id="ws_f_type"><option value="contribute" data-i18n="wsContribute">供款</option><option value="withdraw" data-i18n="wsWithdraw">取款</option></select></div>
+        <div><label data-i18n="wsFlowDateL">日期</label><input id="ws_f_date" type="date"></div>
+        <div><label data-i18n="wsFlowAmtL">金额 CAD</label><input id="ws_f_amt" type="number" step="0.01"></div>
+        <div><label data-i18n="wsFlowNoteL">备注（选填）</label><input id="ws_f_note"></div>
+        <button class="btn" style="justify-self:start;align-self:end" onclick="addWsFlow()" data-i18n="wsFlowAdd">添加</button>
+      </div>
+    </div>
+
+    <div class="sectionhead"><h2 style="font-size:17px" data-i18n="wsPos">当前持仓</h2><div class="meta" id="ws-pos-note"></div></div>
+    <div class="tablewrap"><table id="ws-pos-tbl"></table></div>
+    <div class="addrow">
+      <div class="grid" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr auto">
+        <div><label data-i18n="wsSym">代码</label><input id="ws_p_sym" placeholder="VFV.TO"></div>
+        <div><label data-i18n="wsCat">类别</label><input id="ws_p_cat" placeholder="ETF"></div>
+        <div><label data-i18n="wsQty">数量</label><input id="ws_p_qty" type="number" step="any"></div>
+        <div><label data-i18n="wsCost">成本价</label><input id="ws_p_cost" type="number" step="any"></div>
+        <div><label data-i18n="wsPrice">现价</label><input id="ws_p_price" type="number" step="any"></div>
+        <button class="btn" style="justify-self:start;align-self:end" onclick="addWsPos()" data-i18n="wsPosAdd">加持仓</button>
+      </div>
+      <div class="grid" style="grid-template-columns:1fr auto auto">
+        <div><label data-i18n="wsCashL">现金余额 CAD</label><input id="ws_cash" type="number" step="0.01"></div>
+        <button class="btn" style="justify-self:start;align-self:end" onclick="saveWsCash()" data-i18n="wsCashSave">保存现金</button>
+        <button class="btn" style="justify-self:start;align-self:end" onclick="snapWs()" data-i18n="wsSnap">📌 存为今日快照</button>
+      </div>
+      <div style="font-size:12.5px;color:var(--muted);line-height:1.7" data-i18n-html="wsSnapGuide">改完持仓/现价后点<b style="color:var(--ink)">「存为今日快照」</b>，净值曲线才会多一个点（同一天再存＝覆盖当天）。净值＝持仓市值合计＋现金，自动算。</div>
+    </div>
+
+    <div class="sectionhead"><h2 style="font-size:17px" data-i18n="wsImportHead">导入 WS 报表</h2></div>
+    <div class="addrow">
+      <div style="font-size:12.5px;color:var(--muted);line-height:1.7" data-i18n-html="wsImportGuide2"><b style="color:var(--ink)">怎么导出：</b>WS 网页 → 右上头像 → <b>Documents / Activity</b> → 两份都下载：<b>holdings-report</b>（持仓快照）＋ <b>activities-export</b>（成交与出入金）。两个文件可<b>一次选中一起导入</b>，会自动认。<br><b style="color:var(--ink)">持仓表</b>＝整体替换当前持仓（它<b>不含现金</b>）。<b style="color:var(--ink)">活动表</b>＝成交入库、EFT 出入金自动记进 TFSA 额度，并按导出的日期区间<b>整段替换</b>（同一文件重复导入结果不变；你手动加的流水不受影响）。<br><b style="color:var(--ink)">认不出的活动（股息/利息/转账等）不会被算进额度</b>，会原样列出来给你自己判断——猜错会让你以为还有额度而超额。</div>
+      <input type="file" id="ws-file" accept=".csv,text/csv" multiple>
+      <textarea id="ws-paste" data-i18n-ph="wsPastePh" placeholder="或把某一份 CSV 的全部内容粘贴到这里…" style="min-height:70px;font-family:var(--mono);font-size:11px"></textarea>
+      <button class="btn" style="justify-self:start" onclick="importWS()" data-i18n="wsImportBtn">解析并导入</button>
+      <div id="ws-import-report" style="font-size:12.5px;line-height:1.9;font-family:var(--mono)"></div>
+    </div>
+    <div style="display:none" data-i18n-html="wsImportGuide"><b style="color:var(--red)">尚未开放</b> —— Wealthsimple <b>没有官方 API</b>，网上那些自动抓取的库要存你的账号密码＋2FA（券商凭据，本工具一律不碰，WS 也在封）。所以走 IBKR 同款「你导出、我解析」。<br><b style="color:var(--ink)">要开通它，请给一份样本：</b>WS 网页 → <b>Activity</b>（或 Documents → Statements）→ 导出 <b>CSV</b> → 把文件放到本机任意位置、把路径告诉 Claude。<b>格式我没见过，不会照猜写解析器</b>（猜错会把你的持仓/成本算错）；见到真样本当天就能接上。</div>
+    </div>
+  </section>
+
+  <!-- BOOKS -->
+  <section class="view" id="view-rb">
+    <div class="sectionhead">
+      <h2 data-i18n="rbHead">调仓 · 按目标比例算买卖</h2>
+      <div class="meta" data-i18n="rbSub">先设目标比例，再看要买卖多少</div>
+    </div>
+    <div id="rb-body"></div>
+  </section>
+
+  <section class="view" id="view-books">
+    <div class="sectionhead">
+      <h2 data-i18n="booksHead">投资书库 · AI 蒸馏成个人投资大全</h2>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="meta" id="books-updated">—</div>
+        <button class="iconbtn" onclick="exportCompendium()" data-i18n="compExport">导出大全 MD</button>
+      </div>
+    </div>
+
+    <div class="addrow">
+      <div class="grid" style="grid-template-columns:2fr 1fr auto">
+        <div><label data-i18n="bkKeyL">Anthropic API Key（只存本机浏览器）</label><input id="bk_key" type="password" placeholder="sk-ant-…" autocomplete="off"></div>
+        <div><label data-i18n="bkModelL">模型</label><select id="bk_model"><option value="claude-opus-4-8">Opus 4.8</option><option value="claude-sonnet-5">Sonnet 5</option></select></div>
+        <button class="btn ghost" style="align-self:end" onclick="saveBookAI()" data-i18n="bkSave">保存</button>
+      </div>
+      <div class="meta" id="bk_ai_status"></div>
+    </div>
+
+    <div class="addrow">
+      <div class="grid" style="grid-template-columns:1fr 1fr auto">
+        <div><label data-i18n="bkTitleL">书名</label><input id="bk_title" data-i18n-ph="bkTitlePh" placeholder="聪明的投资者"></div>
+        <div><label data-i18n="bkAuthorL">作者（选填）</label><input id="bk_author" placeholder="Benjamin Graham"></div>
+        <button class="btn" style="align-self:end" onclick="addBook()" data-i18n="bkAdd">+ 添加书</button>
+      </div>
+    </div>
+    <div id="books-list"></div>
+
+    <div class="addrow" id="distill-panel" style="display:none">
+      <div style="font-family:var(--mono);font-size:12px;color:var(--amber)" id="distill-book-label"></div>
+      <textarea id="bk_text" style="min-height:150px" data-i18n-ph="bkTextPh" placeholder="把这本书的一章 / 一部分 / 你的读书笔记整段粘进来（一次建议 ≤2 万字，长书分几次喂，AI 会自动跟已有内容去重合并）…"></textarea>
+      <div class="grid" style="grid-template-columns:1fr auto">
+        <div><label data-i18n="bkImgL">重要图表（选填，可多张；AI 读图并把要点并入大全，图会存进你的私有仓库、显示在对应板块）</label><input type="file" id="bk_imgs" accept="image/*" multiple></div>
+        <button class="btn" style="align-self:end" id="distillBtn" onclick="distillChunk()" data-i18n="bkDistill">✨ 蒸馏并入大全</button>
+      </div>
+      <div class="meta" id="distill-status"></div>
+    </div>
+
+    <div class="sectionhead" style="margin-top:26px"><h2 style="font-size:17px" data-i18n="compHead">📖 我的投资大全（所有书去重合并）</h2><div class="meta" id="comp-meta"></div></div>
+    <div id="compendium"></div>
+  </section>
+
+  <!-- TRENDS -->
+  <section class="view" id="view-trends">
+    <div class="sectionhead">
+      <h2 data-i18n="trendsHead">招聘信号 · 大厂岗位趋势</h2>
+      <div class="meta" id="trends-updated">—</div>
+    </div>
+    <div class="analysis" id="trends-analysis" style="display:none">
+      <h3 data-i18n="trendsAnalysis">趋势研判</h3>
+      <p id="analysis-text"></p>
+      <div id="analysis-signals"></div>
+    </div>
+    <div id="trends-list"></div>
+    <div class="card" style="margin-top:16px;color:var(--muted);font-size:12.5px;line-height:1.7" data-i18n-html="trendsFoot">
+      <b style="color:var(--ink)">读法提示:</b> 岗位数量是<i>方向性</i>信号而非精确预测。关注的是某类岗位<i>随时间的相对变化</i>和 JD 主题的迁移，而非绝对值。数据来自公司 ATS 公开接口(Greenhouse / Lever / Ashby)，每次同步追加一个快照。
+    </div>
+  </section>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============ 状态 ============ */
+let CFG = { owner:'', repo:'', token:'' };
+let DATA = { invest:null, news:null, jobs:null, ibkr:null, books:null, config:null, rebalance:null };
+let SHA  = { invest:null, news:null, jobs:null, ibkr:null, books:null, config:null };
+let dataVersion = 0;   // 每次本地改动 +1
+let savedVersion = 0;  // 已成功保存到的版本
+let saving = false;
+let saveTimer = null, retryTimer = null, refreshTimer = null;
+const isDirty = () => dataVersion !== savedVersion;
+let newsFilter = 'all';
+const PREFIX = 'investment'; // 私有 repo 内的文件夹
+
+/* ============ 双语 i18n（全站共享 pha-lang，默认 zh） ============ */
+let lang = (() => { try { return localStorage.getItem('pha-lang') === 'en' ? 'en' : 'zh'; } catch { return 'zh'; } })();
+const T = (zh, en) => lang === 'en' ? en : zh;
+// 显示辅助：存储值（h.type / t.action / i.category）保持中文不变，只换显示
+const TYPE_EN = {'股票':'Stock','ETF':'ETF','加密':'Crypto','基金':'Fund','现金':'Cash','其他':'Other'};
+const typeLabel = v => lang === 'en' ? (TYPE_EN[v] || v) : v;
+const ACTION_EN = {'买入':'Buy','卖出':'Sell'};
+const actionLabel = v => lang === 'en' ? (ACTION_EN[v] || v) : v;
+const NEWSCAT_EN = {'AI':'AI','金融':'Finance','其他':'Other'};
+const newsCatLabel = v => lang === 'en' ? (NEWSCAT_EN[v] || v) : v;
+const I18N = {
+  brand:{zh:'情报终端',en:'Intelligence Desk'},
+  gateSub:{zh:'连接你的私有数据仓库。凭据只保存在本机浏览器，永远不会写入网页代码或上传到别处。',en:'Connect your private data repo. Credentials stay only in this browser — never written into page code or uploaded anywhere.'},
+  gl_owner:{zh:'GitHub 用户名 / 组织 (owner)',en:'GitHub user / org (owner)'},
+  gl_repo:{zh:'私有仓库名 (repo)',en:'Private repo name (repo)'},
+  gh_repo:{zh:'数据将读写该仓库的 investment/ 文件夹',en:'Data is read/written under the repo’s investment/ folder'},
+  gh_token:{zh:'权限只需该仓库的 Contents: Read & Write',en:'Only needs Contents: Read & Write on that repo'},
+  gateConnect:{zh:'连接',en:'Connect'},
+  gateSecure:{zh:'<b>为什么这样安全:</b> 本站是纯静态页面，没有后端。你的 token 仅存于此设备的 localStorage，仅用于浏览器直连 GitHub API 读写你的私有数据。任何打开本站的其他人都看不到、也用不了你的 token。',en:'<b>Why this is safe:</b> This site is fully static with no backend. Your token lives only in this device’s localStorage and is used only by your browser to read/write your private data via the GitHub API. Anyone else opening this site can’t see or use it.'},
+  refresh:{zh:'刷新',en:'Refresh'},
+  settings:{zh:'设置',en:'Settings'},
+  nav_news:{zh:'动态',en:'News'},
+  nav_invest:{zh:'投资',en:'Invest'},
+  nav_trends:{zh:'趋势',en:'Trends'},
+  newsHead:{zh:'行业动态 · 金融 & AI',en:'Industry News · Finance & AI'},
+  nf_all:{zh:'全部',en:'All'},
+  nf_finance:{zh:'金融',en:'Finance'},
+  nf_other:{zh:'其他',en:'Other'},
+  investHead:{zh:'个人投资 · 分析 / 计划 / 记录',en:'Investments · Analysis / Plans / Records'},
+  exportBtn:{zh:'导出展示数据',en:'Export public data'},
+  exportBtnT:{zh:'把勾选了「公开展示」的条目导出为 invest.public.json',en:'Export items marked public to invest.public.json'},
+  secHoldings:{zh:'持仓',en:'Holdings'},
+  secTxns:{zh:'交易记录',en:'Transactions'},
+  secPlans:{zh:'计划 & 复盘',en:'Plans & Review'},
+  l_name:{zh:'名称',en:'Name'}, l_ticker:{zh:'代码',en:'Ticker'}, l_type:{zh:'类型',en:'Type'},
+  l_qty:{zh:'数量',en:'Qty'}, l_cost:{zh:'成本价',en:'Cost'}, l_price:{zh:'现价(选填)',en:'Price (opt.)'},
+  l_cur:{zh:'币种',en:'Currency'}, l_note:{zh:'备注',en:'Note'},
+  addHolding:{zh:'+ 添加持仓',en:'+ Add holding'},
+  l_date:{zh:'日期',en:'Date'}, l_dir:{zh:'方向',en:'Side'}, l_priceT:{zh:'价格',en:'Price'}, l_fee:{zh:'费用',en:'Fee'},
+  addTxn:{zh:'+ 记一笔',en:'+ Add txn'},
+  l_title:{zh:'标题',en:'Title'}, l_body:{zh:'内容',en:'Body'},
+  addPlan:{zh:'+ 添加',en:'+ Add'},
+  saveNow:{zh:'立即保存',en:'Save now'},
+  saveIdle:{zh:'自动保存已开启',en:'Auto-save on'},
+  notConnected:{zh:'未连接',en:'Not connected'},
+  ph_owner:{zh:'例如 your-name',en:'e.g. your-name'},
+  ph_grepo:{zh:'例如 my-databases',en:'e.g. my-databases'},
+  ty_stock:{zh:'股票',en:'Stock'}, ty_crypto:{zh:'加密',en:'Crypto'}, ty_fund:{zh:'基金',en:'Fund'},
+  ty_cash:{zh:'现金',en:'Cash'}, ty_other:{zh:'其他',en:'Other'},
+  ac_buy:{zh:'买入',en:'Buy'}, ac_sell:{zh:'卖出',en:'Sell'},
+  ph_hname:{zh:'苹果',en:'Apple'}, ph_hnote:{zh:'长期持有 / 论点…',en:'Long-term / thesis…'},
+  ph_tnote:{zh:'原因 / 触发条件…',en:'Reason / trigger…'},
+  ph_ptitle:{zh:'Q3 配置思路 / 减仓决策…',en:'Q3 allocation / trim decision…'},
+  ph_pbody:{zh:'论点、目标价、仓位计划、风险、复盘…',en:'Thesis, target price, sizing, risks, review…'},
+  nav_books:{zh:'书库',en:'Books'},
+  fetchTogT:{zh:'开/关定时抓取（GitHub Actions 每周一、四自动抓取动态与招聘趋势；关闭后定时任务直接跳过，不消耗 API）',en:'Toggle scheduled fetching (GitHub Actions pulls news & hiring trends Mon & Thu; when off, the job skips itself and uses no API)'},
+  ibkrHead:{zh:'IBKR 组合 · 持仓 / 交易 / 盈亏',en:'IBKR Portfolio · Positions / Trades / P&L'},
+  nav_rb:{zh:'调仓',en:'Rebalance'},
+  rbHead:{zh:'调仓 · 按目标比例算买卖',en:'Rebalance · trades to hit your targets'},
+  rbSub:{zh:'先设目标比例，再看要买卖多少（算术计算器，不是投资建议）',en:'Set targets, get the trade list (a calculator, not advice)'},
+  ibkrNavChart:{zh:'净值曲线',en:'NAV curve'},
+  ibkrAlloc:{zh:'持仓配置',en:'Allocation'},
+  ibkrPos:{zh:'当前持仓',en:'Current positions'},
+  ibkrTrades:{zh:'交易记录 · 已实现盈亏',en:'Trades · Realized P/L'},
+  ibkrImport:{zh:'导入 IBKR 报表',en:'Import IBKR statement'},
+  wsHead:{zh:'Wealthsimple TFSA · 持仓 / 供款额度',en:'Wealthsimple TFSA · Holdings / Contribution room'},
+  wsNavChart:{zh:'净值曲线',en:'NAV curve'},
+  wsAlloc:{zh:'持仓配置',en:'Allocation'},
+  wsRoomHead:{zh:'TFSA 供款额度',en:'TFSA contribution room'},
+  wsRoomGuide:{zh:'<b style="color:var(--ink)">基准额度从哪来：</b>CRA <b>My Account → TFSA → Contribution room</b> 里那个数字才是权威的（本工具<b>不替你推算每年限额</b>——算错会害你超额，CRA 罚超出部分 <b>1%/月</b>）。填「该数字」＋「它对应的日期」（通常是 1 月 1 日），下面的流水会在此基准上加减。<br><b style="color:var(--ink)">取款的坑：</b>当年取款要到<b>下一个 1 月 1 日</b>才恢复额度，所以本年取款不计入可用额度。<br><b style="color:var(--ink)">每年 1 月记得回来更新基准</b>（新年度限额和去年取款的恢复都在 CRA 那个数里）。',en:'<b style="color:var(--ink)">Where the base comes from:</b> only the number in CRA <b>My Account → TFSA → Contribution room</b> is authoritative. This tool <b>will not guess the annual limits</b> for you — a wrong guess can push you over, and CRA charges <b>1%/month</b> on the excess. Enter that number plus the date it refers to (usually Jan 1); the flows below adjust from that base.<br><b style="color:var(--ink)">Withdrawal gotcha:</b> a withdrawal only restores room on the <b>next Jan 1</b>, so this year\'s withdrawals do not count toward available room.<br><b style="color:var(--ink)">Come back each January to refresh the base</b> (the new annual limit and last year\'s restored room are both baked into CRA\'s number).'},
+  wsRoomAmtL:{zh:'CRA 可用额度（CAD）',en:'CRA available room (CAD)'},
+  wsRoomAsofL:{zh:'该数字对应日期',en:'Date that number refers to'},
+  wsRoomSave:{zh:'保存基准',en:'Save base'},
+  wsFlowTypeL:{zh:'类型',en:'Type'},
+  wsContribute:{zh:'供款',en:'Contribution'},
+  wsWithdraw:{zh:'取款',en:'Withdrawal'},
+  wsFlowDateL:{zh:'日期',en:'Date'},
+  wsFlowAmtL:{zh:'金额 CAD',en:'Amount CAD'},
+  wsFlowNoteL:{zh:'备注（选填）',en:'Note (optional)'},
+  wsFlowAdd:{zh:'添加',en:'Add'},
+  wsPos:{zh:'当前持仓',en:'Current holdings'},
+  wsSym:{zh:'代码',en:'Symbol'},
+  wsCat:{zh:'类别',en:'Class'},
+  wsQty:{zh:'数量',en:'Qty'},
+  wsCost:{zh:'成本价',en:'Cost'},
+  wsPrice:{zh:'现价',en:'Price'},
+  wsPosAdd:{zh:'加持仓',en:'Add holding'},
+  wsCashL:{zh:'现金余额 CAD',en:'Cash balance CAD'},
+  wsCashSave:{zh:'保存现金',en:'Save cash'},
+  wsSnap:{zh:'📌 存为今日快照',en:'📌 Save today snapshot'},
+  wsSnapGuide:{zh:'改完持仓/现价后点<b style="color:var(--ink)">「存为今日快照」</b>，净值曲线才会多一个点（同一天再存＝覆盖当天）。净值＝持仓市值合计＋现金，自动算。',en:'After updating holdings/prices, click <b style="color:var(--ink)">Save today snapshot</b> to add a point to the NAV curve (saving twice the same day overwrites it). NAV = total market value + cash, computed automatically.'},
+  wsImportHead:{zh:'导入 WS 报表',en:'Import WS statement'},
+  wsImportGuide2:{zh:'<b style="color:var(--ink)">怎么导出：</b>WS 网页 → 右上头像 → <b>Documents / Activity</b> → 两份都下载：<b>holdings-report</b>（持仓快照）＋ <b>activities-export</b>（成交与出入金）。两个文件可<b>一次选中一起导入</b>，会自动认。<br><b style="color:var(--ink)">持仓表</b>＝整体替换当前持仓（它<b>不含现金</b>）。<b style="color:var(--ink)">活动表</b>＝成交入库、EFT 出入金自动记进 TFSA 额度，并按导出的日期区间<b>整段替换</b>（同一文件重复导入结果不变；你手动加的流水不受影响）。<br><b style="color:var(--ink)">认不出的活动（股息/利息/转账等）不会被算进额度</b>，会原样列出来给你自己判断——猜错会让你以为还有额度而超额。',en:'<b style="color:var(--ink)">How to export:</b> WS web → avatar → <b>Documents / Activity</b> → download both: <b>holdings-report</b> (position snapshot) + <b>activities-export</b> (trades & cash). You can <b>select both files at once</b>; each is auto-detected.<br><b style="color:var(--ink)">Holdings</b> = full replace of current positions (it has <b>no cash field</b>). <b style="color:var(--ink)">Activities</b> = trades imported, EFT in/out auto-recorded as TFSA contributions/withdrawals, and the exported date range is <b>replaced wholesale</b> (re-importing the same file is idempotent; your manual flows are untouched).<br><b style="color:var(--ink)">Unrecognized activities (dividends/interest/transfers) are NOT counted toward room</b> — they are listed verbatim for you to judge; guessing could make you think you have room and over-contribute.'},
+  wsPastePh:{zh:'或把某一份 CSV 的全部内容粘贴到这里…',en:'…or paste the full content of one CSV here'},
+  wsImportBtn:{zh:'解析并导入',en:'Parse & import'},
+  wsImportGuide:{zh:'<b style="color:var(--red)">尚未开放</b> —— Wealthsimple <b>没有官方 API</b>，网上那些自动抓取的库要存你的账号密码＋2FA（券商凭据，本工具一律不碰，WS 也在封）。所以走 IBKR 同款「你导出、我解析」。<br><b style="color:var(--ink)">要开通它，请给一份样本：</b>WS 网页 → <b>Activity</b>（或 Documents → Statements）→ 导出 <b>CSV</b> → 把文件放到本机任意位置、把路径告诉 Claude。<b>格式我没见过，不会照猜写解析器</b>（猜错会把你的持仓/成本算错）；见到真样本当天就能接上。',en:'<b style="color:var(--red)">Not enabled yet</b> — Wealthsimple has <b>no official API</b>, and the unofficial scrapers need your login + 2FA (brokerage credentials — this tool never touches them, and WS blocks them anyway). So it follows the IBKR pattern: you export, it parses.<br><b style="color:var(--ink)">To enable it, provide a sample:</b> WS web → <b>Activity</b> (or Documents → Statements) → export <b>CSV</b> → save it anywhere locally and give Claude the path. <b>The format has not been seen, so no parser will be written from guesswork</b> (a wrong guess would corrupt your positions/cost basis); once a real sample exists it can be wired up the same day.'},
+  ibkrGuide:{zh:'<b style="color:var(--ink)">怎么导出：</b>IBKR 网页 → <b>Performance &amp; Reports → Statements → Activity</b> → 期间选「月度」或自定义 → 下载 <b>CSV</b>。把文件选进来（或把内容全选粘贴）。每次导入追加一个净值快照并合并交易（自动去重）；多导几个月份就能看到净值曲线。数据只存进你的私有仓库，绝不进公开展示。',en:'<b style="color:var(--ink)">How to export:</b> IBKR web → <b>Performance &amp; Reports → Statements → Activity</b> → pick Monthly or a custom range → download <b>CSV</b>. Choose the file (or paste its full content). Each import adds one NAV snapshot and merges trades (deduped); import several months to draw the curve. Data goes only to your private repo — never to public display.'},
+  ibkrPastePh:{zh:'或把 Activity Statement CSV 的全部内容粘贴到这里…',en:'…or paste the full Activity Statement CSV content here'},
+  ibkrImportBtn:{zh:'解析并导入',en:'Parse & import'},
+  booksHead:{zh:'投资书库 · AI 蒸馏成个人投资大全',en:'Book Library · AI-distilled personal compendium'},
+  compExport:{zh:'导出大全 MD',en:'Export MD'},
+  bkKeyL:{zh:'Anthropic API Key（只存本机浏览器）',en:'Anthropic API Key (stored in this browser only)'},
+  bkModelL:{zh:'模型',en:'Model'},
+  bkSave:{zh:'保存',en:'Save'},
+  bkTitleL:{zh:'书名',en:'Book title'},
+  bkTitlePh:{zh:'聪明的投资者',en:'The Intelligent Investor'},
+  bkAuthorL:{zh:'作者（选填）',en:'Author (optional)'},
+  bkAdd:{zh:'+ 添加书',en:'+ Add book'},
+  bkTextPh:{zh:'把这本书的一章 / 一部分 / 你的读书笔记整段粘进来（一次建议 ≤2 万字，长书分几次喂，AI 会自动跟已有内容去重合并）…',en:'Paste a chapter / section / your notes from this book (≤20k chars per feed; long books take several feeds — the AI dedups & merges automatically)…'},
+  bkImgL:{zh:'重要图表（选填，可多张；AI 读图并把要点并入大全，图会存进你的私有仓库、显示在对应板块）',en:'Key figures (optional, multiple; the AI reads them into the compendium and the images are stored in your private repo)'},
+  bkDistill:{zh:'✨ 蒸馏并入大全',en:'✨ Distill & merge'},
+  compHead:{zh:'📖 我的投资大全（所有书去重合并）',en:'📖 My Investment Compendium (all books, deduped & merged)'},
+  trendsHead:{zh:'招聘信号 · 大厂岗位趋势',en:'Hiring Signals · Big-Tech Job Trends'},
+  trendsAnalysis:{zh:'趋势研判',en:'Trend Read'},
+  trendsFoot:{zh:'<b style="color:var(--ink)">读法提示:</b> 岗位数量是<i>方向性</i>信号而非精确预测。关注的是某类岗位<i>随时间的相对变化</i>和 JD 主题的迁移，而非绝对值。数据来自公司 ATS 公开接口(Greenhouse / Lever / Ashby)，每次同步追加一个快照。',en:'<b style="color:var(--ink)">How to read:</b> Job counts are a <i>directional</i> signal, not a precise forecast. What matters is the <i>relative change over time</i> for a role type and shifts in JD themes, not absolute values. Data comes from companies’ public ATS endpoints (Greenhouse / Lever / Ashby); each sync appends one snapshot.'},
+  langBtn:{zh:'EN',en:'中'},
+};
+const Ls = k => (I18N[k] || {zh:k,en:k})[lang];
+function applyStatic(){
+  document.documentElement.lang = lang === 'en' ? 'en' : 'zh-CN';
+  document.title = lang === 'en' ? 'Intelligence Desk' : '情报终端 · Intelligence Desk';
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = Ls(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-html]').forEach(el => { el.innerHTML = Ls(el.dataset.i18nHtml); });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el => { el.placeholder = Ls(el.dataset.i18nPh); });
+  document.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = Ls(el.dataset.i18nTitle); });
+  const lb = document.getElementById('langBtn'); if (lb) lb.textContent = Ls('langBtn');
+}
+function toggleLang(){
+  lang = lang === 'en' ? 'zh' : 'en';
+  try { localStorage.setItem('pha-lang', lang); } catch {}
+  applyStatic();
+  if (CFG.token && $('connlabel')) $('connlabel').textContent = ($('led').className.includes('off')) ? T('连接失败','Connection failed') : `${CFG.owner}/${CFG.repo}`;
+  renderAll();
+}
+
+/* ============ 工具 ============ */
+const $ = id => document.getElementById(id);
+const esc = s => (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const today = () => new Date().toISOString().slice(0,10);
+const fmt = n => (n||n===0)?Number(n).toLocaleString(undefined,{maximumFractionDigits:2}):'';
+
+function toast(msg, isErr){
+  const t=$('toast'); t.textContent=msg; t.className='toast show'+(isErr?' err':'');
+  setTimeout(()=>t.className='toast'+(isErr?' err':''),3200);
+}
+
+function b64encode(str){
+  const bytes=new TextEncoder().encode(str); let bin='';
+  bytes.forEach(b=>bin+=String.fromCharCode(b)); return btoa(bin);
+}
+function b64decode(b64){
+  const bin=atob(b64.replace(/\s/g,''));
+  return new TextDecoder().decode(Uint8Array.from(bin,c=>c.charCodeAt(0)));
+}
+
+/* ============ GitHub API ============ */
+async function ghGet(file){
+  const url=`https://api.github.com/repos/${CFG.owner}/${CFG.repo}/contents/${PREFIX}/${file}`;
+  const r=await fetch(url,{headers:{Authorization:`Bearer ${CFG.token}`,Accept:'application/vnd.github+json'}});
+  if(r.status===404) return {data:null, sha:null};
+  if(r.status===401||r.status===403) throw new Error('AUTH');
+  if(!r.ok) throw new Error('GitHub '+r.status);
+  const j=await r.json();
+  return { data: JSON.parse(b64decode(j.content)), sha: j.sha };
+}
+async function ghPut(file,obj,sha,message){
+  const url=`https://api.github.com/repos/${CFG.owner}/${CFG.repo}/contents/${PREFIX}/${file}`;
+  const body={message, content:b64encode(JSON.stringify(obj,null,2))};
+  if(sha) body.sha=sha;
+  let r=await fetch(url,{method:'PUT',headers:{Authorization:`Bearer ${CFG.token}`,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify(body)});
+  if(r.status===409){ // sha 过期，重取后重试
+    const cur=await ghGet(file); body.sha=cur.sha;
+    r=await fetch(url,{method:'PUT',headers:{Authorization:`Bearer ${CFG.token}`,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify(body)});
+  }
+  if(!r.ok) throw new Error('GitHub '+r.status+': '+(await r.text()).slice(0,120));
+  return (await r.json()).content.sha;
+}
+
+/* ============ 设置 / 连接 ============ */
+function loadCfg(){
+  try{ const c=JSON.parse(localStorage.getItem('id_cfg')||'null'); if(c) CFG=c; }catch{}
+  /* [hub-portal] 从共享配置 pha-config 补全 owner/repo/token（仅填空缺，不覆盖已填，不改 path） */
+  try{var _pha=JSON.parse(localStorage.getItem('pha-config')||'null');if(_pha){if(!CFG.owner&&_pha.owner)CFG.owner=_pha.owner;if(!CFG.repo&&_pha.repo)CFG.repo=_pha.repo;if(!CFG.token&&_pha.token)CFG.token=_pha.token;}}catch(e){}
+}
+function saveSetup(){
+  const owner=$('g_owner').value.trim(), repo=$('g_repo').value.trim(), token=$('g_token').value.trim();
+  if(!owner||!repo||!token){ $('g_err').textContent=T('请填写全部字段','Please fill in all fields'); return; }
+  CFG={owner,repo,token};
+  localStorage.setItem('id_cfg',JSON.stringify(CFG));
+  $('g_err').textContent=T('连接中…','Connecting…');
+  $('gate').style.display='none';
+  boot();
+}
+function openSettings(){
+  $('g_owner').value=CFG.owner||''; $('g_repo').value=CFG.repo||''; $('g_token').value=CFG.token||'';
+  $('g_err').textContent=''; $('gate').style.display='flex';
+}
+function setConn(ok){
+  $('led').className='led'+(ok?'':' off');
+  $('connlabel').textContent= ok ? `${CFG.owner}/${CFG.repo}` : T('连接失败','Connection failed');
+}
+
+/* ============ 加载 ============ */
+async function boot(){
+  setConn(false);
+  try{
+    const [inv,news,jobs,ibkr,ws,books,conf,rb]=await Promise.all([
+      ghGet('invest.json').catch(e=>{if(e.message==='AUTH')throw e;return {data:null,sha:null}}),
+      ghGet('news.json').catch(()=>({data:null,sha:null})),
+      ghGet('jobs.json').catch(()=>({data:null,sha:null})),
+      ghGet('ibkr.json').catch(()=>({data:null,sha:null})),
+      ghGet('ws.json').catch(()=>({data:null,sha:null})),
+      ghGet('books.json').catch(()=>({data:null,sha:null})),
+      ghGet('config.json').catch(()=>({data:null,sha:null})),
+      ghGet('rebalance.json').catch(()=>({data:null,sha:null})),
+    ]);
+    DATA.invest = inv.data || {updated_at:'',holdings:[],transactions:[],plans:[]};
+    SHA.invest  = inv.sha;
+    DATA.news   = news.data || {updated_at:'',items:[]};
+    SHA.news    = news.sha;
+    DATA.jobs   = jobs.data || {updated_at:'',snapshots:[],analysis:null};
+    SHA.jobs    = jobs.sha;
+    DATA.ibkr   = ibkr.data || {updated_at:'',snapshots:[],trades:[]};
+    SHA.ibkr    = ibkr.sha;
+    DATA.ws     = ws.data || {updated_at:'',tfsa:{room_amount:null,room_asof:''},flows:[],positions:[],cash:null,snapshots:[],trades:[]};
+    SHA.ws      = ws.sha;
+    DATA.books  = books.data || {updated_at:'',books:[],compendium:{updatedAt:'',sections:[]}};
+    SHA.books   = books.sha;
+    DATA.config = conf.data;   // null = 仓库里还没有 config.json（开关不可用）
+    SHA.config  = conf.sha;
+    DATA.rebalance = rb.data || {updated_at:'',accounts:{}};   // 调仓目标（首次为空，由用户在页面里设）
+    SHA.rebalance  = rb.sha;
+    setConn(true);
+    $('syncinfo').textContent = T('动态 ','News ')+ (DATA.news.updated_at? DATA.news.updated_at.slice(0,16).replace('T',' '):'—');
+    renderAll();
+    startAutoRefresh();
+  }catch(e){
+    if(e.message==='AUTH'){ toast(T('凭据无效或权限不足','Invalid credentials or insufficient permissions'),true); setConn(false); openSettings(); $('g_err').textContent=T('认证失败，请检查 token 权限(需 Contents 读写)与仓库名','Auth failed — check token permissions (needs Contents read/write) and repo name'); }
+    else { toast(T('加载失败: ','Load failed: ')+e.message,true); setConn(false); }
+  }
+}
+// 后台每 5 分钟拉取 Actions 更新的动态/趋势；不碰 invest，避免覆盖未保存的本地编辑
+function startAutoRefresh(){ clearInterval(refreshTimer); refreshTimer=setInterval(refreshFeeds, 5*60*1000); }
+async function refreshFeeds(){
+  if(!CFG.token || document.hidden) return;
+  try{
+    const [news,jobs]=await Promise.all([
+      ghGet('news.json').catch(()=>null),
+      ghGet('jobs.json').catch(()=>null),
+    ]);
+    if(news && news.data){ DATA.news=news.data; SHA.news=news.sha; renderNews(); }
+    if(jobs && jobs.data){ DATA.jobs=jobs.data; SHA.jobs=jobs.sha; renderTrends(); }
+    $('syncinfo').textContent=T('动态 ','News ')+(DATA.news.updated_at?DATA.news.updated_at.slice(0,16).replace('T',' '):'—');
+  }catch{}
+}
+async function reloadAll(){ if(!CFG.token){openSettings();return;} toast(T('刷新中…','Refreshing…')); boot(); }
+
+/* ============ 渲染 ============ */
+function renderAll(){ renderNews(); renderInvest(); renderTrends(); renderFetchTog(); renderIBKR(); renderBooks(); renderCompendium(); renderRebalance(); }
+
+function switchTab(tab){
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
+  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='view-'+tab));
+  if(tab==='ibkr') renderIBKR();   // canvas 在隐藏状态下宽度为 0，切进来时重绘
+  if(tab==='ws') renderWS();       // 同上：canvas 必须在可见时才画
+  if(tab==='rb') renderRebalance();
+}
+
+/* ---- 动态 ---- */
+function setNewsFilter(c,el){ newsFilter=c; document.querySelectorAll('#news-filter button').forEach(b=>b.classList.toggle('on',b===el)); renderNews(); }
+function renderNews(){
+  const n=DATA.news||{items:[]};
+  $('news-updated').textContent = n.updated_at? T('更新于 ','Updated ')+n.updated_at.slice(0,16).replace('T',' '):T('尚无数据','No data yet');
+  const items=(n.items||[]).filter(i=>newsFilter==='all'||i.category===newsFilter);
+  if(!items.length){ $('news-list').innerHTML=`<div class="empty">${T('暂无动态 — 等待定时任务首次抓取，或在私有仓库手动运行 sync workflow','No news yet — waiting for the scheduled job’s first fetch, or run the sync workflow manually in your private repo')}</div>`; return; }
+  $('news-list').innerHTML=items.map(i=>{
+    const cls=i.category==='AI'?'ai':i.category==='金融'?'fin':'';
+    return `<div class="card news-item">
+      <div class="imp">${esc(i.importance||'')}</div>
+      <div style="flex:1">
+        <h3>${i.url?`<a href="${esc(i.url)}" target="_blank" rel="noopener">${esc(i.title)}</a>`:esc(i.title)}</h3>
+        <p>${esc(i.summary)}</p>
+        <div class="tagrow">
+          <span class="chip ${cls}">${esc(newsCatLabel(i.category||'其他'))}</span>
+          ${i.source?`<span>${esc(i.source)}</span>`:''}
+          ${i.date?`<span>${esc(i.date)}</span>`:''}
+        </div>
+      </div></div>`;
+  }).join('');
+}
+
+/* ---- 投资 ---- */
+function setSaveStatus(state, msg){
+  const el=$('dirty'); const t=new Date().toTimeString().slice(0,5);
+  if(state==='idle')         el.innerHTML=T('自动保存已开启','Auto-save on');
+  else if(state==='pending') el.innerHTML=`<span style="color:var(--amber)">${T('● 待自动保存…','● Pending auto-save…')}</span>`;
+  else if(state==='saving')  el.innerHTML=`<span style="color:var(--muted)">${T('⟳ 保存中…','⟳ Saving…')}</span>`;
+  else if(state==='saved')   el.innerHTML=`<span style="color:var(--green)">${T('✓ 已自动保存 ','✓ Auto-saved ')}${t}</span>`;
+  else if(state==='error')   el.innerHTML=`<span style="color:var(--red)">${T('⚠ 保存失败，自动重试中（','⚠ Save failed, retrying (')}${esc(msg||'')}${T('）',')')}</span>`;
+}
+function markDirty(){ dataVersion++; setSaveStatus('pending'); scheduleSave(); }
+function scheduleSave(){ clearTimeout(saveTimer); saveTimer=setTimeout(()=>commitInvest(false), 2000); }
+function renderInvest(){
+  const d=DATA.invest;
+  $('invest-updated').textContent = d.updated_at? T('保存于 ','Saved ')+d.updated_at.slice(0,16).replace('T',' '):T('尚未保存','Not saved yet');
+
+  // stats
+  let cost=0, mkt=0, haveMkt=false;
+  d.holdings.forEach(h=>{ const q=+h.quantity||0, c=+h.cost_basis||0, p=+h.price; cost+=q*c; if(p){haveMkt=true; mkt+=q*p;} else mkt+=q*c; });
+  const pl = haveMkt? mkt-cost : null;
+  const plPct = (haveMkt&&cost)? (pl/cost*100):null;
+  $('invest-stats').innerHTML=`
+    <div class="stat"><div class="k">${T('持仓数','Holdings')}</div><div class="v">${d.holdings.length}</div></div>
+    <div class="stat"><div class="k">${T('总成本','Total cost')}</div><div class="v" style="font-size:21px">${fmt(cost)}</div></div>
+    <div class="stat"><div class="k">${T('估值','Value')}${haveMkt?'':T(' (按成本)',' (at cost)')}</div><div class="v" style="font-size:21px">${fmt(mkt)}</div></div>
+    <div class="stat"><div class="k">${T('浮动盈亏','Unrealized P/L')}</div><div class="v" style="font-size:21px;color:${pl==null?'var(--ink)':pl>=0?'var(--green)':'var(--red)'}">${pl==null?'—':(pl>=0?'+':'')+fmt(pl)+(plPct!=null?` (${plPct>=0?'+':''}${plPct.toFixed(1)}%)`:'')}</div></div>`;
+
+  // holdings table
+  const ht=$('holdings-tbl');
+  if(!d.holdings.length){ ht.innerHTML=`<tr><td style="color:var(--muted);font-family:var(--mono);font-size:12px;border:none">${T('暂无持仓','No holdings')}</td></tr>`; }
+  else{
+    ht.innerHTML=`<tr><th>${T('展示','Public')}</th><th>${T('名称','Name')}</th><th>${T('代码','Ticker')}</th><th>${T('类型','Type')}</th><th>${T('数量','Qty')}</th><th>${T('成本','Cost')}</th><th>${T('现价','Price')}</th><th>${T('盈亏','P/L')}</th><th>${T('备注','Note')}</th><th></th></tr>`+
+    d.holdings.map(h=>{
+      const q=+h.quantity||0,c=+h.cost_basis||0,p=+h.price;
+      const pl= p? (p-c)*q : null;
+      return `<tr>
+        <td><span class="pubtog ${h.public?'on':''}" title="${h.public?T('对外展示中，点击取消','Public — click to unset'):T('点击设为对外展示','Click to make public')}" onclick="togglePublic('holding','${h.id}')">${h.public?'◉':'○'}</span></td>
+        <td>${esc(h.name)}</td><td style="font-family:var(--mono)">${esc(h.ticker)}</td><td>${esc(typeLabel(h.type))}</td>
+        <td class="num">${fmt(h.quantity)}</td><td class="num">${fmt(h.cost_basis)}</td><td class="num">${fmt(h.price)}</td>
+        <td class="num" style="color:${pl==null?'var(--muted)':pl>=0?'var(--green)':'var(--red)'}">${pl==null?'—':(pl>=0?'+':'')+fmt(pl)}</td>
+        <td style="color:var(--muted);max-width:180px">${esc(h.note)}</td>
+        <td><span class="del" onclick="delHolding('${h.id}')">${T('删除','Delete')}</span></td></tr>`;
+    }).join('');
+  }
+
+  // txn table
+  const tt=$('txn-tbl');
+  if(!d.transactions.length){ tt.innerHTML=`<tr><td style="color:var(--muted);font-family:var(--mono);font-size:12px;border:none">${T('暂无交易','No transactions')}</td></tr>`; }
+  else{
+    tt.innerHTML=`<tr><th>${T('展示','Public')}</th><th>${T('日期','Date')}</th><th>${T('方向','Side')}</th><th>${T('名称','Name')}</th><th>${T('代码','Ticker')}</th><th>${T('数量','Qty')}</th><th>${T('价格','Price')}</th><th>${T('费用','Fee')}</th><th>${T('金额','Amount')}</th><th>${T('备注','Note')}</th><th></th></tr>`+
+    [...d.transactions].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(t=>{
+      const amt=(+t.quantity||0)*(+t.price||0);
+      return `<tr>
+        <td><span class="pubtog ${t.public?'on':''}" title="${t.public?T('对外展示中，点击取消','Public — click to unset'):T('点击设为对外展示','Click to make public')}" onclick="togglePublic('txn','${t.id}')">${t.public?'◉':'○'}</span></td>
+        <td style="font-family:var(--mono);font-size:12px">${esc(t.date)}</td>
+        <td style="color:${t.action==='买入'?'var(--green)':'var(--red)'}">${esc(actionLabel(t.action))}</td>
+        <td>${esc(t.name)}</td><td style="font-family:var(--mono)">${esc(t.ticker)}</td>
+        <td class="num">${fmt(t.quantity)}</td><td class="num">${fmt(t.price)}</td><td class="num">${fmt(t.fee)}</td>
+        <td class="num">${fmt(amt)}</td>
+        <td style="color:var(--muted);max-width:160px">${esc(t.note)}</td>
+        <td><span class="del" onclick="delTxn('${t.id}')">${T('删除','Delete')}</span></td></tr>`;
+    }).join('');
+  }
+
+  // plans
+  const plEl=$('plans-list');
+  if(!d.plans.length){ plEl.innerHTML=`<div class="empty">${T('暂无计划或复盘','No plans or reviews')}</div>`; }
+  else{
+    plEl.innerHTML=[...d.plans].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(p=>`
+      <div class="plan"><div class="ph"><h4>${esc(p.title)}</h4><span class="pd"><span class="pubtog ${p.public?'on':''}" title="${p.public?T('对外展示中，点击取消','Public — click to unset'):T('点击设为对外展示','Click to make public')}" onclick="togglePublic('plan','${p.id}')">${p.public?T('◉ 展示中','◉ Public'):T('○ 展示','○ Public')}</span>　${esc(p.date)} <span class="del" onclick="delPlan('${p.id}')">${T('删除','Delete')}</span></span></div>
+      <p>${esc(p.body)}</p></div>`).join('');
+  }
+}
+function addHolding(){
+  const name=$('h_name').value.trim(); if(!name){toast(T('请填名称','Enter a name'),true);return;}
+  DATA.invest.holdings.push({id:uid(),name,ticker:$('h_ticker').value.trim(),type:$('h_type').value,
+    quantity:$('h_qty').value,cost_basis:$('h_cost').value,price:$('h_price').value,currency:$('h_cur').value.trim(),note:$('h_note').value.trim(),public:false});
+  ['h_name','h_ticker','h_qty','h_cost','h_price','h_note'].forEach(i=>$(i).value='');
+  markDirty(); renderInvest();
+}
+function addTxn(){
+  const name=$('t_name').value.trim(); if(!name){toast(T('请填名称','Enter a name'),true);return;}
+  DATA.invest.transactions.push({id:uid(),date:$('t_date').value||today(),action:$('t_action').value,
+    name,ticker:$('t_ticker').value.trim(),quantity:$('t_qty').value,price:$('t_price').value,fee:$('t_fee').value,note:$('t_note').value.trim(),public:false});
+  ['t_name','t_ticker','t_qty','t_price','t_fee','t_note'].forEach(i=>$(i).value='');
+  markDirty(); renderInvest();
+}
+function addPlan(){
+  const title=$('p_title').value.trim(); if(!title){toast(T('请填标题','Enter a title'),true);return;}
+  DATA.invest.plans.push({id:uid(),date:$('p_date').value||today(),title,body:$('p_body').value.trim(),public:false});
+  ['p_title','p_body'].forEach(i=>$(i).value='');
+  markDirty(); renderInvest();
+}
+function delHolding(id){ DATA.invest.holdings=DATA.invest.holdings.filter(h=>h.id!==id); markDirty(); renderInvest(); }
+function delTxn(id){ DATA.invest.transactions=DATA.invest.transactions.filter(t=>t.id!==id); markDirty(); renderInvest(); }
+function delPlan(id){ DATA.invest.plans=DATA.invest.plans.filter(p=>p.id!==id); markDirty(); renderInvest(); }
+
+/* ---- 公开展示标记 & 导出 ---- */
+const DB_ID = 'invest';        // 本库唯一标识，固定不变；导出文件名 invest.public.json
+const DB_TITLE = '个人投资';    // 本库展示名
+function togglePublic(kind,id){
+  const arr = kind==='holding'?DATA.invest.holdings : kind==='txn'?DATA.invest.transactions : DATA.invest.plans;
+  const it = arr.find(x=>x.id===id); if(!it) return;
+  it.public = !it.public;
+  markDirty(); renderInvest();   // 标记随条目一起自动保存
+}
+function exportPublic(){
+  if(!DATA.invest){ toast(T('数据未加载','Data not loaded'),true); return; }
+  const d=DATA.invest, sections=[];
+  // 仅含对外内容；剔除数量/成本/价格/费用(权重金额) 与 note(私人备注)
+  const H = d.holdings.filter(x=>x.public).map(h=>({ id:h.id, name:h.name||'', summary:'', category:h.type||'', content:'', tags:h.ticker?[h.ticker]:[], updatedAt:'' }));
+  if(H.length) sections.push({ type:'holdings', label:'持仓', items:H });
+  const TX = d.transactions.filter(x=>x.public).map(t=>({ id:t.id, name:`${t.action||''} ${t.name||''}`.trim(), summary:'', category:t.action||'', content:'', tags:t.ticker?[t.ticker]:[], updatedAt:t.date||'' }));
+  if(TX.length) sections.push({ type:'transactions', label:'交易记录', items:TX });
+  const P = d.plans.filter(x=>x.public).map(p=>({ id:p.id, name:p.title||'', summary:'', category:p.status||'', content:p.body||'', tags:[], updatedAt:p.date||'' }));
+  if(P.length) sections.push({ type:'plans', label:'计划与复盘', items:P });
+
+  if(!sections.length){ toast(T('未勾选任何「公开展示」条目','No items marked public'),true); return; }
+  const out = { dbId:DB_ID, title:DB_TITLE, generatedAt:new Date().toISOString(), sections };
+  publishPublic(out, sections.reduce((s,x)=>s+x.items.length,0));
+}
+
+// 发布公开数据：直接写入 GitHub 数据仓库（investment/ 目录，与主数据同仓库）；
+// 未配置 GitHub 或发布失败时回退为本地下载。复用 ghGet/ghPut（自带 409 重试）。
+async function publishPublic(out, count){
+  const file=`${DB_ID}.public.json`;
+  if(CFG.token&&CFG.owner&&CFG.repo){
+    try{
+      const cur=await ghGet(file);
+      await ghPut(file, out, cur.sha, `publish ${file} (${count} entries)`);
+      toast(T(`已发布 ${count} 条公开数据 → ${PREFIX}/${file}`,`Published ${count} public items → ${PREFIX}/${file}`));
+      return;
+    }catch(e){
+      toast(T('发布失败: ','Publish failed: ')+e.message+T('，已转为本地下载',', fell back to local download'), true);
+    }
+  }
+  const blob=new Blob([JSON.stringify(out,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=file; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  toast(T(`已导出 ${count} 条 → ${file}（本地下载）`,`Exported ${count} items → ${file} (local download)`));
+}
+
+async function commitInvest(manual){
+  if(!CFG.token){ if(manual) openSettings(); return; }
+  if(saving) return;                       // 已有保存在进行；完成后会复查
+  if(!manual && !isDirty()) return;
+  const v=dataVersion;                     // 记录本次要保存到的版本
+  saving=true; clearTimeout(saveTimer); clearTimeout(retryTimer);
+  setSaveStatus('saving'); $('savebtn').disabled=true;
+  try{
+    DATA.invest.updated_at=new Date().toISOString();
+    SHA.invest = await ghPut('invest.json', DATA.invest, SHA.invest, 'chore: auto-save investment data');
+    savedVersion=v;
+    renderInvest();
+    if(isDirty()){ setSaveStatus('pending'); scheduleSave(); }  // 保存期间又改了，再存一次
+    else setSaveStatus('saved');
+  }catch(e){
+    setSaveStatus('error', e.message);
+    retryTimer=setTimeout(()=>commitInvest(false), 8000);       // 失败 8 秒后自动重试
+  }
+  saving=false; $('savebtn').disabled=false;
+}
+
+/* ---- 抓取开关（GitHub Actions 定时任务的总闸，存 investment/config.json 的 fetch_enabled） ---- */
+function renderFetchTog(){
+  const b=$('fetchTog'); if(!b) return;
+  if(!DATA.config){ b.textContent=T('抓取: —','Fetch: —'); b.style.color=''; return; }
+  const on = DATA.config.fetch_enabled !== false;   // 缺省 = 开（兼容旧 config）
+  b.textContent = on ? T('⏻ 抓取: 开','⏻ Fetch: ON') : T('⏻ 抓取: 关','⏻ Fetch: OFF');
+  b.style.color = on ? 'var(--green)' : 'var(--red)';
+}
+async function toggleFetch(){
+  if(!DATA.config){ toast(T('仓库里没有 investment/config.json，无法切换','No investment/config.json in the repo'),true); return; }
+  const next = !(DATA.config.fetch_enabled !== false);
+  DATA.config.fetch_enabled = next;
+  renderFetchTog();
+  try{
+    SHA.config = await ghPut('config.json', DATA.config, SHA.config, `config: news fetch ${next?'ON':'OFF'}`);
+    toast(next ? T('已开启定时抓取（每周一、四自动运行）','Scheduled fetch ON (runs Mon & Thu)') : T('已关闭定时抓取（定时任务将直接跳过，不消耗 API）','Scheduled fetch OFF (the job will skip itself)'));
+  }catch(e){
+    DATA.config.fetch_enabled = !next; renderFetchTog();
+    toast(T('切换失败: ','Toggle failed: ')+e.message, true);
+  }
+}
+
+/* ============ IBKR 组合追踪 ============ */
+const num = s => { const v=parseFloat(String(s??'').replace(/,/g,'')); return isNaN(v)?null:v; };
+
+function parseCSVLine(line){
+  const out=[]; let cur='', q=false;
+  for(let i=0;i<line.length;i++){ const ch=line[i];
+    if(q){ if(ch==='"'){ if(line[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=ch; }
+    else { if(ch==='"') q=true; else if(ch===','){ out.push(cur); cur=''; } else cur+=ch; } }
+  out.push(cur); return out;
+}
+
+/* 解析 IBKR Activity Statement CSV（多段式：每行第 1 列是段名，第 2 列是 Header/Data） */
+function parseIBKR(text){
+  const secs={}, headers={};
+  text.split(/\r?\n/).forEach(l=>{
+    if(!l.trim()) return;
+    const f=parseCSVLine(l);
+    const sec=f[0], kind=f[1];
+    if(kind==='Header') headers[sec]=f.slice(2);
+    else if(kind==='Data'||kind==='Total'){
+      const h=headers[sec]||[]; const o={_kind:kind};
+      h.forEach((k,i)=>o[k]=f[i+2]);
+      (secs[sec]=secs[sec]||[]).push(o);
+    }
+  });
+
+  let period='';
+  (secs['Statement']||[]).forEach(o=>{ if(o['Field Name']==='Period') period=o['Field Value']||''; });
+  // Period 形如 "June 1, 2026 - June 30, 2026" 或 "June 30, 2026"，取末段作快照日期
+  let date=today();
+  if(period){
+    const tail=period.split(' - ').pop();
+    const d=new Date(tail);
+    if(!isNaN(d)) date=d.toISOString().slice(0,10);
+  }
+
+  let nav=null, cash=null;
+  (secs['Net Asset Value']||[]).forEach(o=>{
+    const cls=(o['Asset Class']||'').trim();
+    if(/^Total/i.test(cls)) nav = num(o['Current Total']) ?? nav;
+    if(/^Cash/i.test(cls))  cash = num(o['Current Total']) ?? cash;
+  });
+  if(nav==null) (secs['Change in NAV']||[]).forEach(o=>{ if((o['Field Name']||'')==='Ending Value') nav=num(o['Field Value']); });
+
+  const positions=(secs['Open Positions']||[])
+    .filter(o=>o._kind==='Data' && (o.DataDiscriminator==='Summary'||!o.DataDiscriminator))
+    .map(o=>({ symbol:(o.Symbol||'').trim(), cat:o['Asset Category']||'', cur:o.Currency||'',
+      qty:num(o.Quantity), costPrice:num(o['Cost Price']), costBasis:num(o['Cost Basis']),
+      price:num(o['Close Price']), value:num(o.Value), unreal:num(o['Unrealized P/L']) }))
+    .filter(p=>p.symbol && p.qty);
+
+  const trades=(secs['Trades']||[])
+    .filter(o=>o._kind==='Data' && o.DataDiscriminator==='Order')
+    .map(o=>({ date:String(o['Date/Time']||'').split(',')[0].trim(), symbol:(o.Symbol||'').trim(), cat:o['Asset Category']||'',
+      qty:num(o.Quantity), price:num(o['T. Price']), proceeds:num(o.Proceeds),
+      fee:num(o['Comm/Fee']), realized:num(o['Realized P/L']), code:(o.Code||'').trim() }))
+    .filter(t=>t.symbol && t.date);
+
+  return { date, nav, cash, positions, trades };
+}
+
+async function importIBKR(){
+  let text=($('ibkr-paste').value||'').trim();
+  const f=$('ibkr-file').files[0];
+  if(!text && f) text=await f.text();
+  if(!text){ toast(T('请选择 CSV 文件或粘贴内容','Choose a CSV file or paste its content'),true); return; }
+  let r;
+  try{ r=parseIBKR(text); }
+  catch(e){ toast(T('解析失败: ','Parse failed: ')+e.message,true); return; }
+  if(!r.positions.length && !r.trades.length && r.nav==null){
+    toast(T('没解析出数据 — 请确认是 IBKR「Activity Statement」的 CSV','Nothing parsed — make sure it’s an IBKR Activity Statement CSV'),true); return;
+  }
+  const d=DATA.ibkr;
+  const snap={ date:r.date, nav:r.nav, cash:r.cash, positions:r.positions };
+  const i=d.snapshots.findIndex(s=>s.date===r.date);
+  if(i>=0) d.snapshots[i]=snap; else d.snapshots.push(snap);
+  d.snapshots.sort((a,b)=>a.date.localeCompare(b.date));
+  const key=t=>[t.date,t.symbol,t.qty,t.price].join('|');
+  const have=new Set(d.trades.map(key));
+  let added=0;
+  r.trades.forEach(t=>{ if(!have.has(key(t))){ d.trades.push(t); have.add(key(t)); added++; } });
+  d.trades.sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+  d.updated_at=new Date().toISOString();
+  try{ SHA.ibkr=await ghPut('ibkr.json', d, SHA.ibkr, `data: import IBKR statement ${r.date}`); }
+  catch(e){ toast(T('保存失败: ','Save failed: ')+e.message,true); return; }
+  $('ibkr-paste').value=''; $('ibkr-file').value='';
+  renderIBKR();
+  toast(T(`导入成功：${r.date} 快照（持仓 ${r.positions.length}）＋新交易 ${added} 笔`,`Imported: ${r.date} snapshot (${r.positions.length} positions) + ${added} new trades`));
+}
+
+/* 极简 canvas 图（无依赖）：净值折线 + 配置环形 */
+function setupCanvas(cv){
+  const dpr=window.devicePixelRatio||1, w=cv.clientWidth||600, h=cv.clientHeight||190;
+  cv.width=w*dpr; cv.height=h*dpr;
+  const ctx=cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,w,h);
+  return {ctx,w,h};
+}
+/* ===== Wealthsimple TFSA =====
+   WS 没有官方 API；非官方抓取库要存账号密码+2FA（券商凭据——本工具一律不碰，WS 也在封）。
+   故与 IBKR 同套路：手动录入 + 报表导入（解析器须照真实样本写，格式不猜）。
+   数据只写私有库 investment/ws.json —— 本工具的数据不做任何公开导出。 */
+function wsCalc(p){
+  const value = (p.qty!=null && p.price!=null) ? p.qty*p.price : null;
+  const costBasis = (p.qty!=null && p.costPrice!=null) ? p.qty*p.costPrice : null;
+  return Object.assign({}, p, {value, costBasis, unreal:(value!=null&&costBasis!=null)?value-costBasis:null});
+}
+function wsPositions(){ return (DATA.ws.positions||[]).map(wsCalc); }
+function wsNav(){
+  const pos=wsPositions(); const c=DATA.ws.cash;
+  if(!pos.length && c==null) return null;
+  return pos.reduce((s,p)=>s+(p.value||0),0) + (c||0);
+}
+/* TFSA 额度计算。基准 = CRA My Account 的权威数字（不猜每年限额）。
+   规则：取款只在「下一个 1 月 1 日」恢复额度 → 当年取款不计入可用。
+   跨年后基准必然失效（缺新年度限额 + 去年取款的恢复），必须提示用户回 CRA 重取。 */
+function wsRoom(){
+  const t=(DATA.ws && DATA.ws.tfsa)||{};
+  if(t.room_amount==null || t.room_amount==='' || !t.room_asof) return null;
+  const base=+t.room_amount, Y=new Date().getFullYear(), asofY=+String(t.room_asof).slice(0,4);
+  let used=0, restored=0, pending=0;
+  (DATA.ws.flows||[]).filter(f=>String(f.date)>=String(t.room_asof)).forEach(f=>{
+    const a=+f.amount||0;
+    if(f.type==='contribute') used+=a;
+    else if(+String(f.date).slice(0,4) < Y) restored+=a;   // 已跨年 → 额度已恢复
+    else pending+=a;                                        // 本年取款 → 明年 1/1 才恢复
+  });
+  return {base, used, restored, pending, available:base-used+restored, stale:asofY<Y, asof:t.room_asof};
+}
+async function wsSave(msg){
+  DATA.ws.updated_at=new Date().toISOString();
+  try{ SHA.ws=await ghPut('ws.json', DATA.ws, SHA.ws, msg); return true; }
+  catch(e){ toast(T('保存失败: ','Save failed: ')+e.message,true); return false; }
+}
+async function saveWsRoom(){
+  const amt=$('ws_room_amt').value, asof=$('ws_room_asof').value;
+  if(amt===''||!asof){ toast(T('额度和日期都要填','Enter both amount and date'),true); return; }
+  DATA.ws.tfsa={room_amount:+amt, room_asof:asof};
+  if(await wsSave('data: set TFSA room base '+asof)){ renderWS(); toast(T('基准已保存','Base saved')); }
+}
+async function addWsFlow(){
+  const type=$('ws_f_type').value, date=$('ws_f_date').value, amt=$('ws_f_amt').value;
+  if(!date||amt===''){ toast(T('日期和金额必填','Date and amount required'),true); return; }
+  if(+amt<=0){ toast(T('金额要大于 0（取款也填正数，类型选「取款」）','Amount must be > 0 (withdrawals are positive too — pick type "Withdrawal")'),true); return; }
+  DATA.ws.flows=DATA.ws.flows||[];
+  DATA.ws.flows.push({id:uid(), date, type, amount:+amt, note:$('ws_f_note').value||''});
+  DATA.ws.flows.sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+  if(await wsSave('data: add TFSA '+type+' '+date)){
+    $('ws_f_amt').value=''; $('ws_f_note').value='';
+    renderWS(); toast(T('已添加','Added'));
+  }
+}
+async function delWsFlow(id){
+  if(!confirm(T('删除这笔流水？','Delete this flow?'))) return;
+  DATA.ws.flows=(DATA.ws.flows||[]).filter(f=>f.id!==id);
+  if(await wsSave('data: delete TFSA flow')){ renderWS(); }
+}
+async function addWsPos(){
+  const sym=($('ws_p_sym').value||'').trim();
+  if(!sym){ toast(T('代码必填','Symbol required'),true); return; }
+  const q=$('ws_p_qty').value, c=$('ws_p_cost').value, pr=$('ws_p_price').value;
+  DATA.ws.positions=DATA.ws.positions||[];
+  DATA.ws.positions.push({id:uid(), symbol:sym, cat:($('ws_p_cat').value||'').trim(), cur:'CAD',
+    qty:q===''?null:+q, costPrice:c===''?null:+c, price:pr===''?null:+pr});
+  if(await wsSave('data: add WS holding '+sym)){
+    ['ws_p_sym','ws_p_cat','ws_p_qty','ws_p_cost','ws_p_price'].forEach(i=>$(i).value='');
+    renderWS(); toast(T('已加持仓','Holding added'));
+  }
+}
+async function delWsPos(id){
+  if(!confirm(T('删除这个持仓？','Delete this holding?'))) return;
+  DATA.ws.positions=(DATA.ws.positions||[]).filter(p=>p.id!==id);
+  if(await wsSave('data: delete WS holding')){ renderWS(); }
+}
+async function editWsPrice(id){
+  const p=(DATA.ws.positions||[]).find(x=>x.id===id); if(!p) return;
+  const v=prompt(T('更新现价 — ','Update price — ')+p.symbol, p.price==null?'':p.price);
+  if(v===null) return;
+  p.price = v===''?null:+v;
+  if(await wsSave('data: update WS price '+p.symbol)){ renderWS(); }
+}
+async function saveWsCash(){
+  const v=$('ws_cash').value;
+  DATA.ws.cash = v===''?null:+v;
+  if(await wsSave('data: set WS cash')){ renderWS(); toast(T('现金已保存','Cash saved')); }
+}
+async function snapWs(){
+  const pos=wsPositions(), nav=wsNav();
+  if(nav==null){ toast(T('先录入持仓或现金','Add holdings or cash first'),true); return; }
+  const date=new Date().toISOString().slice(0,10);
+  const snap={date, nav, cash:DATA.ws.cash, positions:pos.map(p=>({symbol:p.symbol,cat:p.cat,cur:p.cur,qty:p.qty,costPrice:p.costPrice,costBasis:p.costBasis,price:p.price,value:p.value,unreal:p.unreal}))};
+  DATA.ws.snapshots=DATA.ws.snapshots||[];
+  const i=DATA.ws.snapshots.findIndex(x=>x.date===date);
+  if(i>=0) DATA.ws.snapshots[i]=snap; else DATA.ws.snapshots.push(snap);   // 同日＝覆盖
+  DATA.ws.snapshots.sort((a,b)=>a.date.localeCompare(b.date));
+  if(await wsSave('data: WS snapshot '+date)){ renderWS(); toast(T('已存快照 '+date,'Snapshot saved '+date)); }
+}
+/* ===== WS 报表解析（照真实导出样本写，没见过的格式一律不猜）=====
+   两种导出，按表头自动认：
+   ① holdings-report：Account Name,…,Symbol,…,Quantity,…,Market Price,…,Book Value (CAD),…,Market Value,…
+      → 全量持仓快照（权威）。注意：**没有现金字段**，现金只能由活动表推。
+   ② activities-export：transaction_date,…,activity_type,activity_sub_type,description,…,quantity,unit_price,commission,net_cash_amount
+      → 成交 + 出入金。末尾有一行 "As of …" 和空行，要跳过。
+
+   ⚠️ 致命细节（实测样本得出，别改回去）：同一天可能有**多笔完全相同**的成交
+   （样本里两笔 BUY 各 13.1814 股 @189.6599，持仓表 26.3628 = 2×13.1814 印证是两笔真实成交）。
+   IBKR 那套 `date|symbol|qty|price` 去重会把它们合并 → 持仓凭空少一半。
+   故本解析器**不按内容去重**，改用「按导出覆盖的日期区间整段替换」：同一份文件重复导入结果不变，
+   区间重叠的新导出覆盖旧数据，手动加的流水（src!=='ws'）不受影响。 */
+function wsRows(text){
+  const lines=text.split(/\r?\n/).filter(l=>l.trim() && !/^"?As of /.test(l.trim()));
+  if(!lines.length) return null;
+  const head=parseCSVLine(lines[0]).map(h=>h.trim());
+  return {head, rows:lines.slice(1).map(l=>{ const f=parseCSVLine(l); const o={}; head.forEach((k,i)=>o[k]=(f[i]==null?'':f[i].trim())); return o; })};
+}
+function wsKindOf(head){
+  const h=head.join('|');
+  if(/transaction_date/.test(h) && /activity_type/.test(h)) return 'activities';
+  if(/Account Name/.test(h) && /Book Value \(CAD\)/.test(h)) return 'holdings';
+  return null;
+}
+const WS_CAT={EXCHANGE_TRADED_FUND:'ETF'};   // 只映射见过的，其余原样透传（不猜）
+function parseWSHoldings(rows){
+  const pos=[], skipped=[];
+  rows.forEach(r=>{
+    if((r['Account Type']||'').toUpperCase()!=='TFSA'){ skipped.push((r['Account Type']||'?')+' '+(r['Symbol']||'')); return; }
+    const qty=+r['Quantity']||0;
+    const book=r['Book Value (CAD)']===''?null:+r['Book Value (CAD)'];
+    pos.push({ id:uid(), symbol:r['Symbol']||'', cat:WS_CAT[r['Security Type']]||r['Security Type']||'',
+      cur:r['Market Value Currency']||'CAD', qty,
+      costPrice:(book!=null&&qty)?book/qty:null,
+      price:r['Market Price']===''?null:+r['Market Price'] });
+  });
+  return {positions:pos, skipped};
+}
+function parseWSActivities(rows){
+  const trades=[], flows=[], unknown=[]; let cashDelta=0, lo=null, hi=null;
+  rows.forEach(r=>{
+    if((r.account_type||'').toUpperCase()!=='TFSA'){ unknown.push({date:r.transaction_date, why:T('非 TFSA 账户','Not a TFSA account'), raw:(r.account_type||'')+' '+(r.description||'')}); return; }
+    const d=r.transaction_date||''; if(d){ if(!lo||d<lo) lo=d; if(!hi||d>hi) hi=d; }
+    const net=r.net_cash_amount===''?0:+r.net_cash_amount;
+    cashDelta+=net;
+    if(r.activity_type==='Trade'){
+      trades.push({date:d, symbol:r.symbol||'', cat:'', qty:r.quantity===''?null:+r.quantity,
+        price:r.unit_price===''?null:+r.unit_price, proceeds:net, fee:r.commission===''?0:+r.commission,
+        realized:null, code:r.activity_sub_type||''});
+      return;
+    }
+    if(r.activity_type==='MoneyMovement' && (r.activity_sub_type||'').toUpperCase()==='EFT'){
+      // EFT 进出 TFSA ＝ 供款/取款（样本里 Deposit +5000 两笔）。按金额正负判向。
+      if(net>0){ flows.push({id:uid(), date:d, type:'contribute', amount:net, note:'WS '+(r.description||'EFT'), src:'ws'}); return; }
+      if(net<0){ flows.push({id:uid(), date:d, type:'withdraw', amount:-net, note:'WS '+(r.description||'EFT'), src:'ws'}); return; }
+    }
+    /* 其余 MoneyMovement（股息/利息/账户间转账…）一律**不猜**：
+       TFSA 里股息利息不占额度、机构间直接转账也不占，但从非注册账户转入就占——猜错会让用户
+       以为还有额度→超额→CRA 罚 1%/月。故列出来交给用户自己判断。 */
+    unknown.push({date:d, why:T('未识别的活动类型，没算进额度','Unrecognized activity — not counted toward room'), raw:[r.activity_type,r.activity_sub_type,r.description,net].filter(Boolean).join(' · ')});
+  });
+  return {trades, flows, unknown, cashDelta, lo, hi};
+}
+async function importWS(){
+  const texts=[]; const files=$('ws-file').files;
+  for(let i=0;i<files.length;i++) texts.push(await files[i].text());
+  const pasted=($('ws-paste').value||'').trim(); if(pasted) texts.push(pasted);
+  if(!texts.length){ toast(T('请选择 CSV 文件或粘贴内容','Choose CSV file(s) or paste content'),true); return; }
+
+  const report=[]; let touched=false, suggestCash=null;
+  for(const text of texts){
+    const parsed=wsRows(text); if(!parsed){ report.push('⚠️ '+T('空文件','Empty file')); continue; }
+    const kind=wsKindOf(parsed.head);
+    if(!kind){ report.push('⚠️ '+T('认不出这个 CSV（表头不是 WS 的 holdings-report 或 activities-export）','Unrecognized CSV — header is neither WS holdings-report nor activities-export')); continue; }
+
+    if(kind==='holdings'){
+      const {positions, skipped}=parseWSHoldings(parsed.rows);
+      DATA.ws.positions=positions; touched=true;    // 全量快照＝整体替换
+      report.push('✅ '+T('持仓表：导入 '+positions.length+' 个持仓（整体替换）','Holdings: imported '+positions.length+' positions (full replace)'));
+      if(skipped.length) report.push('　　'+T('跳过非 TFSA 行 '+skipped.length+' 条：','Skipped '+skipped.length+' non-TFSA rows: ')+esc(skipped.join('、')));
+      report.push('　　⚠️ '+T('持仓表没有现金字段 — 现金请用活动表推算或手填','Holdings report has no cash field — derive cash from activities or enter it manually'));
+    } else {
+      const {trades, flows, unknown, cashDelta, lo, hi}=parseWSActivities(parsed.rows);
+      if(lo&&hi){
+        // 按区间整段替换（不按内容去重——样本证明同日同量同价的成交可以是两笔真的）
+        DATA.ws.trades=(DATA.ws.trades||[]).filter(t=>!(t.date>=lo&&t.date<=hi)).concat(trades);
+        DATA.ws.trades.sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+        DATA.ws.flows=(DATA.ws.flows||[]).filter(f=>!(f.src==='ws'&&f.date>=lo&&f.date<=hi)).concat(flows);
+        DATA.ws.flows.sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+        touched=true;
+        report.push('✅ '+T('活动表 '+lo+' ~ '+hi+'：成交 '+trades.length+' 笔、出入金 '+flows.length+' 笔（该区间整段替换，手动加的流水不受影响）',
+                            'Activities '+lo+' ~ '+hi+': '+trades.length+' trades, '+flows.length+' cash flows (range replaced; manual flows untouched)'));
+        suggestCash=cashDelta;
+      }
+      if(unknown.length){
+        report.push('⚠️ '+T('有 '+unknown.length+' 条没算进额度（我不确定算不算供款，交给你判断）：', unknown.length+' rows were NOT counted toward room (unsure if they are contributions — your call):'));
+        unknown.slice(0,8).forEach(u=>report.push('　　· '+esc(u.date||'')+' '+esc(u.raw)));
+        if(unknown.length>8) report.push('　　…'+T('还有 '+(unknown.length-8)+' 条','and '+(unknown.length-8)+' more'));
+      }
+    }
+  }
+  if(suggestCash!=null){
+    report.push('💡 '+T('按活动表推算现金 = '+fmt(suggestCash)+'（<b>仅当你导出的是「全部历史」才准</b>；持仓表不含现金）','Cash derived from activities = '+fmt(suggestCash)+' (<b>only correct if you exported the FULL history</b>; the holdings report has no cash)')
+      +' <button class="iconbtn" onclick="applyWsCash('+suggestCash+')">'+T('填入现金','Use as cash')+'</button>');
+  }
+  if(touched){
+    if(!await wsSave('data: import WS statement')) return;
+    renderWS();
+  }
+  $('ws-import-report').innerHTML=report.join('<br>');
+  $('ws-file').value=''; $('ws-paste').value='';
+  if(touched) toast(T('导入完成 — 看下方报告','Imported — see the report below'));
+}
+async function applyWsCash(v){
+  DATA.ws.cash=+v;
+  if(await wsSave('data: set WS cash from activities')){ $('ws_cash').value=v; renderWS(); toast(T('现金已填入','Cash applied')); }
+}
+function renderWS(){
+  const d=DATA.ws; if(!d || !$('ws-stats')) return;
+  const pos=wsPositions(), nav=wsNav(), room=wsRoom();
+  const unreal=pos.reduce((s,p)=>s+(p.unreal||0),0), hasU=pos.some(p=>p.unreal!=null);
+  $('ws-updated').textContent = d.updated_at ? T('更新于 ','Updated ')+d.updated_at.slice(0,16).replace('T',' ')
+    : T('尚无数据 — 在下方录入持仓或设置 TFSA 基准额度','No data — add holdings or set your TFSA base below');
+  $('ws-stats').innerHTML=`
+    <div class="stat"><div class="k">${T('净值 NAV','NAV')}</div><div class="v" style="font-size:21px">${nav==null?'—':fmt(nav)}</div></div>
+    <div class="stat"><div class="k">${T('现金','Cash')}</div><div class="v" style="font-size:21px">${d.cash==null?'—':fmt(d.cash)}</div></div>
+    <div class="stat"><div class="k">${T('浮动盈亏','Unrealized P/L')}</div><div class="v" style="font-size:21px;color:${unreal>=0?'var(--green)':'var(--red)'}">${hasU?(unreal>=0?'+':'')+fmt(unreal):'—'}</div></div>
+    <div class="stat"><div class="k">${T('TFSA 剩余额度','TFSA room left')}</div><div class="v" style="font-size:21px;color:${room?(room.available<0?'var(--red)':'var(--green)'):'inherit'}">${room?fmt(room.available):'—'}</div></div>
+    <div class="stat"><div class="k">${T('持仓数','Holdings')}</div><div class="v">${pos.length}</div></div>`;
+
+  const hasNav=drawNavChart($('ws-nav-chart'), d.snapshots||[]);
+  $('ws-nav-note').textContent = !hasNav ? T('存快照后显示','Shows after you save a snapshot')
+    : (d.snapshots||[]).filter(s=>s.nav!=null).length===1 ? T('之后每次更新完点「存为今日快照」，就会连成曲线','Save a snapshot after each update to draw the curve') : '';
+  drawAllocChart($('ws-alloc-chart'), pos);
+
+  // TFSA 额度
+  if(!room){
+    $('ws-room-note').textContent=T('未设置基准 — 去 CRA My Account 抄那个数字','No base set — copy the number from CRA My Account');
+  }else{
+    const bits=[T('基准 ','Base ')+room.asof+'：'+fmt(room.base),
+                T('已供款 ','Contributed ')+fmt(room.used),
+                room.restored?T('已恢复 ','Restored ')+fmt(room.restored):null,
+                room.pending?T('本年取款 ','Withdrawn this year ')+fmt(room.pending)+T('（明年 1/1 才恢复）',' (restores next Jan 1)'):null].filter(Boolean);
+    $('ws-room-note').innerHTML=esc(bits.join(' · '))
+      + (room.stale?` <span style="color:var(--red)">⚠️ ${T('基准是 '+room.asof.slice(0,4)+' 年的，今年请回 CRA 更新（新年度限额未计入）','Base is from '+room.asof.slice(0,4)+' — refresh it at CRA (this year\'s new limit is not included)')}</span>`:'')
+      + (room.available<0?` <span style="color:var(--red)">⚠️ ${T('已超额！CRA 对超出部分按 1%/月罚','Over-contributed! CRA charges 1%/month on the excess')}</span>`:'');
+    if($('ws_room_amt').value==='') $('ws_room_amt').value=room.base;
+    if($('ws_room_asof').value==='') $('ws_room_asof').value=room.asof;
+  }
+  const ft=$('ws-flow-tbl'), flows=d.flows||[];
+  if(!flows.length) ft.innerHTML=`<tr><td style="color:var(--muted);font-family:var(--mono);font-size:12px;border:none">${T('还没有供款/取款记录','No contributions or withdrawals yet')}</td></tr>`;
+  else ft.innerHTML=`<tr><th>${T('日期','Date')}</th><th>${T('类型','Type')}</th><th>${T('金额','Amount')}</th><th>${T('备注','Note')}</th><th></th></tr>`+
+    flows.map(f=>`<tr><td style="font-family:var(--mono)">${esc(f.date)}</td>
+      <td style="color:${f.type==='contribute'?'var(--green)':'var(--red)'}">${f.type==='contribute'?T('供款','Contribution'):T('取款','Withdrawal')}</td>
+      <td class="num">${f.type==='contribute'?'+':'−'}${fmt(f.amount)}</td>
+      <td style="color:var(--muted)">${esc(f.note||'')}</td>
+      <td><button class="iconbtn" onclick="delWsFlow('${f.id}')">${T('删除','Delete')}</button></td></tr>`).join('');
+
+  // 持仓
+  const snaps=d.snapshots||[];
+  $('ws-pos-note').textContent = snaps.length ? T('最近快照 ','Last snapshot ')+snaps[snaps.length-1].date : T('尚未存过快照','No snapshot yet');
+  const pt=$('ws-pos-tbl');
+  if(!pos.length) pt.innerHTML=`<tr><td style="color:var(--muted);font-family:var(--mono);font-size:12px;border:none">${T('暂无持仓 — 在下方添加','No holdings — add one below')}</td></tr>`;
+  else pt.innerHTML=`<tr><th>${T('代码','Symbol')}</th><th>${T('类别','Class')}</th><th>${T('数量','Qty')}</th><th>${T('成本价','Cost')}</th><th>${T('现价','Price')}</th><th>${T('市值','Value')}</th><th>${T('浮动盈亏','Unreal. P/L')}</th><th>%</th><th></th></tr>`+
+    [...pos].sort((a,b)=>(b.value||0)-(a.value||0)).map(p=>{
+      const pct=p.costBasis?(p.unreal/p.costBasis*100):null;
+      return `<tr><td style="font-family:var(--mono)">${esc(p.symbol)}</td><td style="color:var(--muted)">${esc(p.cat||'')}</td>
+        <td class="num">${fmt(p.qty)}</td><td class="num">${fmt(p.costPrice)}</td>
+        <td class="num"><a href="javascript:void(0)" onclick="editWsPrice('${p.id}')" style="color:inherit;text-decoration:underline dotted" title="${T('点击更新现价','Click to update price')}">${p.price==null?T('未填','—'):fmt(p.price)}</a></td>
+        <td class="num">${fmt(p.value)}</td>
+        <td class="num" style="color:${(p.unreal||0)>=0?'var(--green)':'var(--red)'}">${p.unreal==null?'—':(p.unreal>=0?'+':'')+fmt(p.unreal)}</td>
+        <td class="num" style="color:${(pct||0)>=0?'var(--green)':'var(--red)'}">${pct==null?'—':(pct>=0?'+':'')+pct.toFixed(1)+'%'}</td>
+        <td><button class="iconbtn" onclick="delWsPos('${p.id}')">${T('删除','Delete')}</button></td></tr>`;
+    }).join('');
+  if($('ws_cash').value==='' && d.cash!=null) $('ws_cash').value=d.cash;
+}
+
+function drawNavChart(cv, snaps){
+  const {ctx,w,h}=setupCanvas(cv);
+  const pts=snaps.filter(s=>s.nav!=null).map(s=>({x:s.date,y:s.nav}));
+  if(!pts.length) return false;
+  const pad={l:56,r:12,t:12,b:22};
+  const ys=pts.map(p=>p.y), ymin=Math.min(...ys), ymax=Math.max(...ys);
+  const y0=ymin===ymax? ymin-1 : ymin-(ymax-ymin)*.1, y1=ymin===ymax? ymax+1 : ymax+(ymax-ymin)*.1;
+  const X=i=> pts.length===1? (pad.l+(w-pad.l-pad.r)/2) : pad.l+(w-pad.l-pad.r)*i/(pts.length-1);
+  const Y=v=> pad.t+(h-pad.t-pad.b)*(1-(v-y0)/(y1-y0));
+  const css=getComputedStyle(document.documentElement);
+  const amber=css.getPropertyValue('--amber').trim()||'#e0aa3e', muted=css.getPropertyValue('--muted').trim()||'#8d8a78', line=css.getPropertyValue('--line').trim()||'#2c2c20';
+  ctx.strokeStyle=line; ctx.fillStyle=muted; ctx.font='10px IBM Plex Mono,monospace'; ctx.lineWidth=1;
+  for(let g=0; g<4; g++){ const v=y0+(y1-y0)*g/3, y=Y(v);
+    ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(w-pad.r,y); ctx.stroke();
+    ctx.fillText(Math.round(v).toLocaleString(), 4, y+3); }
+  ctx.strokeStyle=amber; ctx.lineWidth=2; ctx.beginPath();
+  pts.forEach((p,i)=>{ const x=X(i), y=Y(p.y); i? ctx.lineTo(x,y):ctx.moveTo(x,y); });
+  ctx.stroke();
+  ctx.fillStyle=amber;
+  pts.forEach((p,i)=>{ ctx.beginPath(); ctx.arc(X(i),Y(p.y),3,0,7); ctx.fill(); });
+  ctx.fillStyle=muted;
+  ctx.fillText(pts[0].x, pad.l, h-6);
+  const last=pts[pts.length-1].x, tw=ctx.measureText(last).width;
+  if(pts.length>1) ctx.fillText(last, w-pad.r-tw, h-6);
+  return true;
+}
+function drawAllocChart(cv, positions){
+  const {ctx,w,h}=setupCanvas(cv);
+  const vals=positions.filter(p=>p.value!=null&&p.value>0).sort((a,b)=>b.value-a.value);
+  if(!vals.length) return false;
+  const top=vals.slice(0,7);
+  const rest=vals.slice(7).reduce((s,p)=>s+p.value,0);
+  const entries=top.map(p=>({k:p.symbol,v:p.value}));
+  if(rest>0) entries.push({k:T('其他','Other'),v:rest});
+  const total=entries.reduce((s,e)=>s+e.v,0);
+  const colors=['#e0aa3e','#6f93b8','#7fae6a','#c9695a','#9a7a32','#8b7e94','#b08d57','#5c6e84'];
+  const cx=h/2+8, cy=h/2, R=Math.min(h/2-14,74), r=R*.58;
+  let a=-Math.PI/2;
+  entries.forEach((e,i)=>{
+    const sweep=e.v/total*Math.PI*2;
+    ctx.beginPath(); ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,R,a,a+sweep); ctx.closePath();
+    ctx.fillStyle=colors[i%colors.length]; ctx.fill();
+    a+=sweep;
+  });
+  const css=getComputedStyle(document.documentElement);
+  ctx.fillStyle=css.getPropertyValue('--panel').trim()||'#16170f';
+  ctx.beginPath(); ctx.arc(cx,cy,r,0,7); ctx.fill();
+  ctx.font='11px IBM Plex Mono,monospace';
+  let ly=cy-entries.length*8+6;
+  entries.forEach((e,i)=>{
+    ctx.fillStyle=colors[i%colors.length]; ctx.fillRect(cx+R+18, ly-7, 8,8);
+    ctx.fillStyle=css.getPropertyValue('--ink').trim()||'#ece7d6';
+    ctx.fillText(`${e.k} ${(e.v/total*100).toFixed(1)}%`, cx+R+32, ly);
+    ly+=16;
+  });
+  return true;
+}
+
+function renderIBKR(){
+  const d=DATA.ibkr; if(!d || !$('ibkr-stats')) return;
+  $('ibkr-updated').textContent = d.updated_at? T('更新于 ','Updated ')+d.updated_at.slice(0,16).replace('T',' '):T('尚无数据 — 在下方导入第一份报表','No data — import your first statement below');
+  const last=d.snapshots[d.snapshots.length-1]||null;
+  const pos=(last&&last.positions)||[];
+  const unreal=pos.reduce((s,p)=>s+(p.unreal||0),0);
+  const realized=d.trades.reduce((s,t)=>s+(t.realized||0),0);
+  $('ibkr-stats').innerHTML=`
+    <div class="stat"><div class="k">${T('净值 NAV','NAV')}</div><div class="v" style="font-size:21px">${last&&last.nav!=null?fmt(last.nav):'—'}</div></div>
+    <div class="stat"><div class="k">${T('现金','Cash')}</div><div class="v" style="font-size:21px">${last&&last.cash!=null?fmt(last.cash):'—'}</div></div>
+    <div class="stat"><div class="k">${T('浮动盈亏','Unrealized P/L')}</div><div class="v" style="font-size:21px;color:${unreal>=0?'var(--green)':'var(--red)'}">${pos.length?(unreal>=0?'+':'')+fmt(unreal):'—'}</div></div>
+    <div class="stat"><div class="k">${T('已实现盈亏(累计)','Realized P/L (cum.)')}</div><div class="v" style="font-size:21px;color:${realized>=0?'var(--green)':'var(--red)'}">${d.trades.length?(realized>=0?'+':'')+fmt(realized):'—'}</div></div>
+    <div class="stat"><div class="k">${T('持仓数','Positions')}</div><div class="v">${pos.length}</div></div>`;
+
+  const hasNav=drawNavChart($('ibkr-nav-chart'), d.snapshots);
+  $('ibkr-nav-note').textContent = !hasNav? T('导入报表后显示','Shows after you import a statement')
+    : d.snapshots.filter(s=>s.nav!=null).length===1? T('再导入其它月份的报表，就会连成曲线','Import more months to draw the curve') : '';
+  // ⚠️ 早先这里把 22 个美元持仓和 1 个加元持仓的 value **直接相加**（value 是原币），
+  // 占比图因此是错的。现在统一换算成基准币再画；汇率用报表自洽反推出来的那个
+  // （反推不出来时退回原样并在图注里说明，绝不悄悄按 1:1 算）。
+  const _fxd = deriveFx(pos, last && last.cash, last && last.nav, 'CAD');
+  const posBase = (_fxd.fx && Object.keys(_fxd.fx).length !== 0) || _fxd.why === 'all_base'
+    ? pos.map(p => Object.assign({}, p, { value: (p.value || 0) * ((_fxd.fx || {})[p.cur] ?? (p.cur === 'CAD' ? 1 : NaN)) }))
+        .filter(p => !isNaN(p.value))
+    : pos;
+  drawAllocChart($('ibkr-alloc-chart'), posBase);
+  const _allocNote = $('ibkr-alloc-note');
+  if (_allocNote) _allocNote.textContent = _fxd.why === 'derived'
+    ? T(`已按 1 ${_fxd.from} = ${_fxd.rate} CAD 换算成加元占比`, `Converted at 1 ${_fxd.from} = ${_fxd.rate} CAD`)
+    : (pos.some(p => p.cur && p.cur !== 'CAD') ? T('⚠️ 缺汇率，占比按原币混算（不准）', '⚠️ No FX rate — shares mix currencies') : '');
+
+  $('ibkr-pos-date').textContent = last? T('快照 ','Snapshot ')+last.date : '';
+  const pt=$('ibkr-pos-tbl');
+  if(!pos.length) pt.innerHTML=`<tr><td style="color:var(--muted);font-family:var(--mono);font-size:12px;border:none">${T('暂无持仓数据','No position data')}</td></tr>`;
+  else pt.innerHTML=`<tr><th>${T('代码','Symbol')}</th><th>${T('类别','Class')}</th><th>${T('数量','Qty')}</th><th>${T('成本价','Cost')}</th><th>${T('现价','Price')}</th><th>${T('市值','Value')}</th><th>${T('浮动盈亏','Unreal. P/L')}</th><th>%</th></tr>`+
+    [...pos].sort((a,b)=>(b.value||0)-(a.value||0)).map(p=>{
+      const pct=p.costBasis? (p.unreal/p.costBasis*100):null;
+      return `<tr><td style="font-family:var(--mono)">${esc(p.symbol)}</td><td style="color:var(--muted)">${esc(p.cat)}</td>
+      <td class="num">${fmt(p.qty)}</td><td class="num">${fmt(p.costPrice)}</td><td class="num">${fmt(p.price)}</td><td class="num">${fmt(p.value)}<span style="color:var(--muted);font-size:10px;margin-left:3px">${esc(p.cur||'')}</span></td>
+      <td class="num" style="color:${(p.unreal||0)>=0?'var(--green)':'var(--red)'}">${p.unreal==null?'—':(p.unreal>=0?'+':'')+fmt(p.unreal)}</td>
+      <td class="num" style="color:${(pct||0)>=0?'var(--green)':'var(--red)'}">${pct==null?'—':(pct>=0?'+':'')+pct.toFixed(1)+'%'}</td></tr>`;
+    }).join('');
+
+  const tt=$('ibkr-trades-tbl');
+  if(!d.trades.length) tt.innerHTML=`<tr><td style="color:var(--muted);font-family:var(--mono);font-size:12px;border:none">${T('暂无交易','No trades')}</td></tr>`;
+  else tt.innerHTML=`<tr><th>${T('日期','Date')}</th><th>${T('代码','Symbol')}</th><th>${T('方向','Side')}</th><th>${T('数量','Qty')}</th><th>${T('价格','Price')}</th><th>${T('费用','Fee')}</th><th>${T('已实现盈亏','Realized P/L')}</th></tr>`+
+    d.trades.slice(0,80).map(t=>{
+      const buy=(t.qty||0)>0;
+      return `<tr><td style="font-family:var(--mono);font-size:12px">${esc(t.date)}</td><td style="font-family:var(--mono)">${esc(t.symbol)}</td>
+      <td style="color:${buy?'var(--green)':'var(--red)'}">${buy?T('买入','Buy'):T('卖出','Sell')}</td>
+      <td class="num">${fmt(Math.abs(t.qty||0))}</td><td class="num">${fmt(t.price)}</td><td class="num">${fmt(Math.abs(t.fee||0))}</td>
+      <td class="num" style="color:${(t.realized||0)>=0?'var(--green)':'var(--red)'}">${!t.realized?'—':(t.realized>=0?'+':'')+fmt(t.realized)}</td></tr>`;
+    }).join('');
+}
+
+/* ============ 投资书蒸馏（个人投资大全） ============ */
+let activeBookId=null;
+const bkImgBlobs={};   // 仓库图片路径 -> objectURL
+
+function bkAI(){ try{ return JSON.parse(localStorage.getItem('id_ai_cfg')||'{}'); }catch{ return {}; } }
+function saveBookAI(){
+  const cur=bkAI();
+  const key=$('bk_key').value.trim() || cur.key || '';
+  const model=$('bk_model').value;
+  localStorage.setItem('id_ai_cfg', JSON.stringify({key,model}));
+  $('bk_key').value='';
+  updateBkAIStatus();
+}
+function updateBkAIStatus(){
+  const c=bkAI();
+  if($('bk_model')&&c.model) $('bk_model').value=c.model;
+  $('bk_ai_status').textContent = c.key? T('AI 已就绪 · ','AI ready · ')+(c.model||'claude-opus-4-8').replace('claude-','')
+    : T('未设置 API Key — 蒸馏功能不可用（Key 只存本机浏览器，绝不进仓库）','No API key — distillation unavailable (key stays in this browser only)');
+}
+
+function addBook(){
+  const title=$('bk_title').value.trim();
+  if(!title){ toast(T('请填书名','Enter a book title'),true); return; }
+  DATA.books.books.unshift({ id:uid(), title, author:$('bk_author').value.trim(), addedAt:today(), chunks:0, imgs:0, summary:'' });
+  $('bk_title').value=''; $('bk_author').value='';
+  saveBooks(T('已添加《','Added “')+title+T('》— 点它的「喂入内容」开始蒸馏','” — click “Feed content” to start distilling'));
+  renderBooks();
+}
+function delBook(id){
+  const b=DATA.books.books.find(x=>x.id===id);
+  if(!confirm(T(`删除《${b?.title}》？（已并入大全的要点会保留，只是不再显示这本书）`,`Delete “${b?.title}”? (Points already merged into the compendium stay)`))) return;
+  DATA.books.books=DATA.books.books.filter(x=>x.id!==id);
+  if(activeBookId===id){ activeBookId=null; $('distill-panel').style.display='none'; }
+  saveBooks(); renderBooks();
+}
+function feedBook(id){
+  activeBookId=id;
+  const b=DATA.books.books.find(x=>x.id===id);
+  $('distill-panel').style.display='grid';
+  $('distill-book-label').textContent=T('正在喂入：《','Feeding: “')+ (b?.title||'') + T('》','”');
+  $('distill-status').textContent='';
+  renderBooks();
+  $('bk_text').focus();
+}
+async function saveBooks(msg){
+  DATA.books.updated_at=new Date().toISOString();
+  try{ SHA.books=await ghPut('books.json', DATA.books, SHA.books, 'data: books/compendium update'); if(msg) toast(msg); }
+  catch(e){ toast(T('保存失败: ','Save failed: ')+e.message, true); }
+}
+
+function renderBooks(){
+  const el=$('books-list'); if(!el) return;
+  const bs=DATA.books? DATA.books.books:[];
+  $('books-updated').textContent = DATA.books&&DATA.books.updated_at? T('更新于 ','Updated ')+DATA.books.updated_at.slice(0,16).replace('T',' '):'—';
+  if(!bs.length){ el.innerHTML=`<div class="empty">${T('还没有书。添加一本，然后把内容分章喂给 AI，蒸馏成你的投资大全。','No books yet. Add one, feed it chapter by chapter, and distill it into your personal compendium.')}</div>`; return; }
+  el.innerHTML=bs.map(b=>`
+    <div class="bookrow${b.id===activeBookId?' feeding':''}">
+      <div><span class="bt">《${esc(b.title)}》</span> ${b.author?`<span class="ba">${esc(b.author)}</span>`:''}
+        ${b.summary?`<div class="ba" style="margin-top:3px">${esc(b.summary)}</div>`:''}</div>
+      <div class="bmeta">
+        <span>${T('已喂 ','Fed ')}${b.chunks||0}${T(' 段',' chunks')}${b.imgs?` · ${b.imgs}${T(' 图',' imgs')}`:''}</span>
+        <button class="iconbtn" onclick="feedBook('${b.id}')">${b.id===activeBookId?T('喂入中…','Feeding…'):T('喂入内容','Feed content')}</button>
+        <span class="del" onclick="delBook('${b.id}')">${T('删除','Delete')}</span>
+      </div>
+    </div>`).join('');
+}
+
+/* 图片：本地文件 → 压缩 JPEG base64（喂 AI + 存仓库） */
+function fileToJpegB64(file, maxSide){
+  return new Promise((resolve,reject)=>{
+    const img=new Image();
+    img.onload=()=>{
+      const scale=Math.min(1,(maxSide||1400)/Math.max(img.width,img.height));
+      const cv=document.createElement('canvas');
+      cv.width=Math.round(img.width*scale); cv.height=Math.round(img.height*scale);
+      cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+      resolve(cv.toDataURL('image/jpeg',0.82).split(',')[1]);
+      URL.revokeObjectURL(img.src);
+    };
+    img.onerror=reject;
+    img.src=URL.createObjectURL(file);
+  });
+}
+async function ghPutRaw(file, b64, message){
+  const url=`https://api.github.com/repos/${CFG.owner}/${CFG.repo}/contents/${PREFIX}/${file}`;
+  const body={message, content:b64};
+  let r=await fetch(url,{method:'PUT',headers:{Authorization:`Bearer ${CFG.token}`,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify(body)});
+  if(r.status===409||r.status===422){
+    const cur=await fetch(url,{headers:{Authorization:`Bearer ${CFG.token}`,Accept:'application/vnd.github+json'}});
+    if(cur.ok){ body.sha=(await cur.json()).sha;
+      r=await fetch(url,{method:'PUT',headers:{Authorization:`Bearer ${CFG.token}`,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify(body)}); }
+  }
+  if(!r.ok) throw new Error('GitHub '+r.status);
+}
+async function repoImg(path){
+  if(bkImgBlobs[path]) return bkImgBlobs[path];
+  const r=await fetch(`https://api.github.com/repos/${CFG.owner}/${CFG.repo}/contents/${PREFIX}/${path}`,
+    {headers:{Authorization:`Bearer ${CFG.token}`,Accept:'application/vnd.github.raw'}});
+  if(!r.ok) throw new Error('GitHub '+r.status);
+  const u=URL.createObjectURL(await r.blob());
+  bkImgBlobs[path]=u; return u;
+}
+
+const DISTILL_SYSTEM =
+'你是「个人投资大全」的蒸馏编辑。用户会持续喂入多本投资书籍的章节或笔记，你负责把它们合并成一份不断生长的、按主题组织的投资知识大全。\n' +
+'规则：\n' +
+'1. 输入包含【现有大全】(JSON) 和【新材料】(某本书的一段内容，可能附图)。输出更新后的完整大全 sections。\n' +
+'2. 去重合并：新材料的要点若与现有要点重复 → 合并成一条更好的（sources 取并集）；观点冲突 → 保留一条要点同时呈现分歧并标注各自出处。\n' +
+'3. 每条要点 (point) 是一段自足的话（一般 1–3 句），讲清一个可用的认知/方法/数据，不要空洞口号。\n' +
+'4. 板块 (heading) 按主题而非按书：如 估值方法、市场心理与行为、风险与仓位管理、宏观与周期、投资体系与流程、案例与教训 等；沿用现有板块名，必要时才新增。\n' +
+'5. sources 数组填 bookId（输入里给了本书的 bookId 与现有要点的 sources）。\n' +
+'6. 若附带图片：读取图中关键信息并入要点；某条要点确实需要配图理解时，把该要点的 image_ref 设为对应图片序号（从 1 起），最多给最重要的 2 条配图。\n' +
+'7. 一律简体中文。book_summary 用一句话概括这本书（基于至今喂入的所有内容）。\n' +
+'8. 现有要点除非与新材料重复/冲突，否则原样保留（包括其 img 字段）——绝不丢内容。';
+
+const DISTILL_SCHEMA={
+  type:'object',
+  properties:{
+    sections:{type:'array',items:{type:'object',properties:{
+      heading:{type:'string'},
+      points:{type:'array',items:{type:'object',properties:{
+        text:{type:'string'},
+        sources:{type:'array',items:{type:'string'}},
+        img:{type:'string'},
+        image_ref:{type:'integer'}
+      },required:['text','sources'],additionalProperties:false}}
+    },required:['heading','points'],additionalProperties:false}},
+    book_summary:{type:'string'}
+  },
+  required:['sections','book_summary'],
+  additionalProperties:false
+};
+
+async function distillChunk(){
+  const ai=bkAI();
+  if(!ai.key){ toast(T('请先保存 Anthropic API Key','Save your Anthropic API key first'),true); return; }
+  const book=DATA.books.books.find(b=>b.id===activeBookId);
+  if(!book){ toast(T('先点某本书的「喂入内容」','Click a book’s “Feed content” first'),true); return; }
+  const text=$('bk_text').value.trim();
+  const files=[...($('bk_imgs').files||[])].slice(0,6);
+  if(!text && !files.length){ toast(T('请粘贴内容或选择图片','Paste text or choose images'),true); return; }
+
+  const btn=$('distillBtn'); btn.disabled=true;
+  const st=$('distill-status');
+  try{
+    st.textContent=T('准备材料…','Preparing…');
+    const imgB64s=[];
+    for(const f of files) imgB64s.push(await fileToJpegB64(f,1400));
+
+    const comp=DATA.books.compendium||{sections:[]};
+    const compJson=JSON.stringify({sections:(comp.sections||[]).map(s=>({heading:s.heading,points:(s.points||[]).map(p=>({text:p.text,sources:p.sources||[],img:p.img||undefined}))}))});
+    if(compJson.length>180000){ st.textContent=''; toast(T('大全已很大，本次请求可能超限——建议先「导出大全 MD」留档','Compendium is very large; consider exporting MD first'),true); }
+
+    const content=[{type:'text',text:
+      '【现有大全】\n'+compJson+
+      '\n\n【本书信息】bookId: '+book.id+'  书名:《'+book.title+'》'+(book.author?'  作者: '+book.author:'')+
+      '\n\n【新材料】\n'+(text||'（本次只有图片）')}];
+    imgB64s.forEach((b,i)=>{
+      content.push({type:'text',text:'图片 '+(i+1)+'：'});
+      content.push({type:'image',source:{type:'base64',media_type:'image/jpeg',data:b}});
+    });
+
+    st.textContent=T('AI 蒸馏中…（30–90 秒，别关页面）','Distilling… (30–90s, keep the page open)');
+    const r=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'content-type':'application/json','x-api-key':ai.key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({ model:ai.model||'claude-opus-4-8', max_tokens:30000, system:DISTILL_SYSTEM,
+        messages:[{role:'user',content}], output_config:{format:{type:'json_schema',schema:DISTILL_SCHEMA}} })
+    });
+    if(r.status===401) throw new Error(T('API Key 无效 (401)','Invalid API key (401)'));
+    if(!r.ok) throw new Error('HTTP '+r.status+' '+(await r.text()).slice(0,140));
+    const j=await r.json();
+    const tb=(j.content||[]).find(b=>b.type==='text');
+    if(!tb) throw new Error(T('未返回内容','No content returned')+(j.stop_reason==='max_tokens'?T('（超长，试着少喂点）',' (too long — feed less at once)'):''));
+    const out=JSON.parse(tb.text);
+    if(!Array.isArray(out.sections)) throw new Error(T('返回结构不完整','Malformed response'));
+
+    // 上传被引用的图片 → 把 image_ref 换成仓库路径
+    st.textContent=T('保存图片与大全…','Saving images & compendium…');
+    for(const s of out.sections) for(const p of (s.points||[])){
+      if(p.image_ref && imgB64s[p.image_ref-1]){
+        const path='book-images/'+book.id+'-'+Date.now()+'-'+p.image_ref+'.jpg';
+        try{ await ghPutRaw(path, imgB64s[p.image_ref-1], 'books: figure from '+book.title); p.img=path; }catch(e){}
+      }
+      delete p.image_ref;
+    }
+
+    DATA.books.compendium={ updatedAt:new Date().toISOString(), sections:out.sections };
+    book.chunks=(book.chunks||0)+1;
+    book.imgs=(book.imgs||0)+imgB64s.length;
+    if(out.book_summary) book.summary=out.book_summary;
+    await saveBooks();
+    $('bk_text').value=''; $('bk_imgs').value='';
+    st.textContent='';
+    renderBooks(); renderCompendium();
+    toast(T('已蒸馏并入大全 ✓ 继续喂下一段，或换一本书','Distilled & merged ✓ Feed the next chunk or switch books'));
+    $('compendium').scrollIntoView({behavior:'smooth',block:'start'});
+  }catch(e){
+    st.textContent=''; toast(T('蒸馏失败: ','Distill failed: ')+e.message,true);
+  }finally{ btn.disabled=false; }
+}
+
+function renderCompendium(){
+  const el=$('compendium'); if(!el) return;
+  const comp=(DATA.books&&DATA.books.compendium)||{sections:[]};
+  const secs=comp.sections||[];
+  const bookName=id=>{ const b=(DATA.books.books||[]).find(x=>x.id===id); return b? b.title : id; };
+  const nPts=secs.reduce((s,x)=>s+(x.points||[]).length,0);
+  $('comp-meta').textContent = nPts? `${secs.length}${T(' 个板块 · ',' sections · ')}${nPts}${T(' 条要点',' points')}${comp.updatedAt? ' · '+comp.updatedAt.slice(0,10):''}`:'';
+  if(!secs.length){ el.innerHTML=`<div class="empty">${T('大全还是空的。加一本书、喂入第一章，它就开始生长。','The compendium is empty. Add a book and feed the first chapter to start growing it.')}</div>`; return; }
+  el.innerHTML=secs.map(s=>`
+    <div class="comp-sec"><h3>${esc(s.heading)}</h3>
+      ${(s.points||[]).map(p=>`
+        <div class="comp-point">${esc(p.text)}
+          ${p.img?`<img data-bkimg="${esc(p.img)}" alt="">`:''}
+          <div class="srcs">${(p.sources||[]).map(id=>`<span>《${esc(bookName(id))}》</span>`).join('')}</div>
+        </div>`).join('')}
+    </div>`).join('');
+  el.querySelectorAll('img[data-bkimg]').forEach(img=>{
+    repoImg(img.getAttribute('data-bkimg')).then(u=>{ img.src=u; }).catch(()=>{ img.remove(); });
+  });
+}
+function exportCompendium(){
+  const comp=(DATA.books&&DATA.books.compendium)||{sections:[]};
+  if(!(comp.sections||[]).length){ toast(T('大全还是空的','Compendium is empty'),true); return; }
+  const bookName=id=>{ const b=(DATA.books.books||[]).find(x=>x.id===id); return b? b.title:id; };
+  let md='# '+T('我的投资大全','My Investment Compendium')+'\n\n'+T('> 由 ','> Distilled from ')+(DATA.books.books||[]).length+T(' 本书蒸馏合并 · ',' books · ')+(comp.updatedAt||'').slice(0,10)+'\n\n';
+  (comp.sections||[]).forEach(s=>{
+    md+='## '+s.heading+'\n\n';
+    (s.points||[]).forEach(p=>{ md+='- '+p.text+((p.sources||[]).length?'（'+p.sources.map(bookName).map(t=>'《'+t+'》').join(' ')+'）':'')+'\n'; });
+    md+='\n';
+  });
+  const blob=new Blob([md],{type:'text/markdown'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='investment-compendium.md'; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+
+/* ---- 趋势 ---- */
+function renderTrends(){
+  const j=DATA.jobs||{snapshots:[]};
+  $('trends-updated').textContent = j.updated_at? T('更新于 ','Updated ')+j.updated_at.slice(0,16).replace('T',' '):T('尚无数据','No data yet');
+
+  // analysis
+  if(j.analysis&&j.analysis.summary){
+    $('trends-analysis').style.display='block';
+    $('analysis-text').textContent=j.analysis.summary;
+    $('analysis-signals').innerHTML=(j.analysis.signals||[]).map(s=>`<div class="signal">${esc(s)}</div>`).join('');
+  } else $('trends-analysis').style.display='none';
+
+  const snaps=j.snapshots||[];
+  if(!snaps.length){ $('trends-list').innerHTML=`<div class="empty">${T('暂无招聘快照 — 在私有仓库的 config.json 配置要追踪的公司后运行 sync workflow','No hiring snapshots — configure companies to track in your repo’s config.json, then run the sync workflow')}</div>`; return; }
+
+  // 取每家公司最新快照
+  const latest={};
+  snaps.forEach(s=>{ if(!latest[s.company]||s.date>latest[s.company].date) latest[s.company]=s; });
+  const companies=Object.values(latest).sort((a,b)=>(b.total||0)-(a.total||0));
+
+  $('trends-list').innerHTML=companies.map(c=>{
+    const cats=c.by_category||{};
+    const max=Math.max(1,...Object.values(cats));
+    const bars=Object.entries(cats).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`
+      <div class="bar"><div class="name">${esc(k)}</div>
+      <div class="track"><div class="fill" style="width:${Math.round(v/max*100)}%"></div></div>
+      <div class="ct">${v}</div></div>`).join('');
+    // 与上一快照对比
+    const prev=snaps.filter(s=>s.company===c.company&&s.date<c.date).sort((a,b)=>b.date.localeCompare(a.date))[0];
+    let delta='';
+    if(prev){ const d=(c.total||0)-(prev.total||0); delta=`<span style="color:${d>0?'var(--green)':d<0?'var(--red)':'var(--muted)'};font-family:var(--mono);font-size:11px">${d>0?'▲+':d<0?'▼':''}${d} vs ${prev.date}</span>`; }
+    return `<div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
+        <h3 style="font-family:var(--serif);font-size:18px">${esc(c.company)}</h3>
+        <span style="font-family:var(--mono);font-size:12px;color:var(--muted)">${c.total||0} ${T('个岗位','jobs')} · ${esc(c.date)}</span>
+      </div>
+      <div style="margin-bottom:8px">${delta}</div>
+      <div class="bars">${bars}</div>
+      ${(c.sample_titles&&c.sample_titles.length)?`<div style="margin-top:10px;font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.7">${T('样本: ','Sample: ')}${c.sample_titles.slice(0,5).map(esc).join(' · ')}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+/* ============ 启动 ============ */
+window.addEventListener('beforeunload',e=>{ if(isDirty()||saving){ commitInvest(false); e.preventDefault(); e.returnValue=''; } });
+$('t_date').value=today(); $('p_date').value=today();
+loadCfg();
+applyStatic();
+updateBkAIStatus();
+if(CFG.token){ $('gate').style.display='none'; boot(); }
+/**
+ * 调仓计算器（确定性、纯函数、无副作用）——情报终端「调仓」页签的算术内核。
+ *
+ * 它只回答一个算术问题：**要让各组占比达到我自己设的目标，需要买卖多少。**
+ * 不预测、不推荐买什么，也不判断目标合不合理 —— 那些是用户自己的决定。
+ *
+ * 三条硬规矩（都是为了别在钱上出错）：
+ *  1. **缺汇率绝不默认 1.0**：外币持仓没有汇率就排除出计算并明确报警，宁可算不出也不算错。
+ *  2. **卖不超过持有**、买不超过可用现金；整股模式一律向下取整（宁少不多）。
+ *  3. 输出自带**对账检查**（占比合计、现金收支、卖出量不超持仓），UI 直接显示 ✓/✗。
+ */
+
+/** 从 IBKR 月报快照反推汇率：NAV 与 cash 是基准币，持仓 value 是原币，故只剩一个未知数。
+ *  仅当「基准币 + 一种外币」时可解；多于两种货币要手填（返回 null + 原因）。 */
+function deriveFx(positions, cash, nav, base) {
+  if (nav == null || cash == null) return { fx: null, why: "no_nav" };
+  const curs = [...new Set(positions.map((p) => p.cur).filter(Boolean))];
+  const foreign = curs.filter((c) => c !== base);
+  if (!foreign.length) return { fx: {}, why: "all_base" };
+  if (foreign.length > 1) return { fx: null, why: "multi_currency", currencies: foreign };
+  const f = foreign[0];
+  const baseVal = sum(positions.filter((p) => p.cur === base).map(val));
+  const fgnVal = sum(positions.filter((p) => p.cur === f).map(val));
+  if (!fgnVal) return { fx: null, why: "no_foreign_value" };
+  const rate = (nav - baseVal - cash) / fgnVal;
+  if (!(rate > 0.1 && rate < 10)) return { fx: null, why: "implausible", rate };
+  return { fx: { [f]: round(rate, 6) }, why: "derived", from: f, rate: round(rate, 6) };
+}
+
+const val = (p) => (Number(p.qty) || 0) * (Number(p.price) || 0);
+const sum = (a) => a.reduce((s, x) => s + (Number(x) || 0), 0);
+const round = (x, n = 2) => Math.round((Number(x) || 0) * 10 ** n) / 10 ** n;
+
+/**
+ * @param {object} inp
+ *   positions [{symbol,cur,qty,price,locked?}]  一个账户的持仓（qty*price = 原币市值）
+ *   cash                                        可用现金（基准币）
+ *   base                                        基准货币，如 'CAD'
+ *   fx {USD:1.4198}                             外币→基准币 的汇率（基准币自己不用写）
+ *   groups {SYMBOL:'组名'}                       不写的标的自成一组（组名=代码）
+ *   targets {'组名': 60}                         目标百分比；**合计可以小于 100，差额即现金目标**
+ *   opts.mode 'both'|'buyOnly'                   买卖都行 / 只买不卖（拿新钱填坑）
+ *   opts.newCash                                 这次新投入的钱（基准币）
+ *   opts.reserveCash                             要留着不投的现金（基准币）
+ *   opts.bandPct                                 容忍带：偏离小于这个百分点就不动（默认 1）
+ *   opts.wholeShares                             true=只买整股（IBKR），false=允许碎股（WS）
+ */
+function planRebalance(inp) {
+  const base = inp.base || "CAD";
+  const fx = Object.assign({ [base]: 1 }, inp.fx || {});
+  const opts = Object.assign(
+    { mode: "both", newCash: 0, reserveCash: 0, bandPct: 1, wholeShares: "auto" },
+    inp.opts || {},
+  );
+  const warnings = [];
+  // wholeShares:'auto' —— **别假设整股**。账户里可能本来就有碎股，说明券商支持碎股交易；
+  // 若强行按整股算，这些持仓一股都动不了，算出来的「做不到」其实是默认值造成的假约束。
+  // （实测遇到过：按整股算会让目标比例卡在远低于可达值的位置。）
+  // 判据：任一持仓数量不是整数 → 允许碎股。
+  if (opts.wholeShares === "auto") {
+    const frac = (inp.positions || []).some((p) => Math.abs((Number(p.qty) || 0) % 1) > 1e-9);
+    opts.wholeShares = !frac;
+    opts.wholeSharesAuto = true;
+  }
+
+  // ── 换算到基准币；缺汇率的持仓排除并报警（绝不当 1.0 用）──
+  const usable = [];
+  for (const p of inp.positions || []) {
+    const rate = fx[p.cur];
+    if (rate == null) {
+      warnings.push({ code: "no_fx", cur: p.cur, symbol: p.symbol });
+      continue;
+    }
+    usable.push({
+      symbol: p.symbol,
+      cur: p.cur,
+      qty: Number(p.qty) || 0,
+      price: Number(p.price) || 0,
+      locked: !!p.locked,
+      rate,
+      priceBase: (Number(p.price) || 0) * rate,
+      valBase: val(p) * rate,
+    });
+  }
+  for (const p of usable) if (!(p.price > 0)) warnings.push({ code: "no_price", symbol: p.symbol });
+
+  const cash = Number(inp.cash) || 0;
+  const newCash = Number(opts.newCash) || 0;
+  const reserve = Number(opts.reserveCash) || 0;
+  const posVal = sum(usable.map((p) => p.valBase));
+  // 可投资总额＝持仓 + 现金 + 新投入 − 预留现金（预留的钱不参与算目标）
+  const investable = posVal + cash + newCash - reserve;
+
+  // ── 分组归集 ──
+  const groupOf = (sym) => (inp.groups && inp.groups[sym]) || sym;
+  const groups = {};
+  for (const p of usable) {
+    const g = groupOf(p.symbol);
+    (groups[g] = groups[g] || { name: g, val: 0, members: [] }).val += p.valBase;
+    groups[g].members.push(p);
+  }
+  // 目标里写了但当前没持仓的组也要出现（否则永远买不进去）
+  for (const g of Object.keys(inp.targets || {})) {
+    if (!groups[g]) groups[g] = { name: g, val: 0, members: [] };
+  }
+
+  const targetPctSum = sum(Object.values(inp.targets || {}));
+  if (targetPctSum > 100.01) warnings.push({ code: "target_over_100", sum: round(targetPctSum, 2) });
+  const cashTargetPct = Math.max(0, 100 - targetPctSum); // 没分配的部分＝现金目标
+
+  // ── 每组的差额 ──
+  const band = (Number(opts.bandPct) || 0) / 100;
+  const groupRows = Object.values(groups).map((g) => {
+    const tgtPct = Number((inp.targets || {})[g.name]) || 0;
+    const tgtVal = (investable * tgtPct) / 100;
+    const nowPct = investable > 0 ? (g.val / investable) * 100 : 0;
+    let delta = tgtVal - g.val;
+    const driftPct = investable > 0 ? Math.abs(delta) / investable : 0;
+    const inBand = driftPct < band;
+    if (inBand) delta = 0;
+    return {
+      name: g.name,
+      nowVal: round(g.val),
+      nowPct: round(nowPct, 2),
+      targetPct: round(tgtPct, 2),
+      targetVal: round(tgtVal),
+      delta: round(delta),
+      driftPct: round(driftPct * 100, 2),
+      inBand,
+      _members: g.members,
+    };
+  });
+
+  // 组内成员的可动性检查（真正的分摊在下面的 fill 里做）
+  for (const g of groupRows) {
+    if (!g.delta) continue;
+    const movable = (g._members || []).filter((m) => !m.locked && m.price > 0);
+    if (!movable.length) warnings.push({ code: g._members.length ? "group_locked" : "group_no_symbol", group: g.name });
+  }
+
+  // ── 成交：先卖后买，每一步都按「整股 + 不超持仓 + 不超预算」约束 ──
+  // 两个教训都写在这里，别改回去：
+  // ① **必须先卖后买**：第一版拿「理论卖出额」当买入预算，但整股向下取整后实际卖不出那么多
+  //    （22 个卫星持仓里很多市值不足一股价 → floor 成 0 股），现金被算成负两千。
+  // ② **等比分摊之后要补一轮余额**：只按现值等比再取整，小持仓永远动不了，
+  //    结果目标 60% 只能挪到 25%。补齐规则＝谁还差得最多且价格塞得进剩余额度就再动它一股
+  //    （经典最大余额法），并且只在「这一股能让偏离变小」时才动（remaining > 半股价）。
+  const trades = [];
+  const tradeOf = {};   // symbol -> trade（同一标的只出一笔，便于加股）
+  const addShares = (p, side, shares) => {
+    if (!(shares > 0) || !(p.priceBase > 0)) return 0;
+    if (side === "sell") shares = Math.min(shares, p.qty - (tradeOf[p.symbol]?.qty || 0));
+    if (!(shares > 0)) return 0;
+    let t = tradeOf[p.symbol];
+    if (!t) {
+      t = tradeOf[p.symbol] = { symbol: p.symbol, side, cur: p.cur, qty: 0, price: round(p.price, 4),
+                                amountNative: 0, amountBase: 0, rate: p.rate };
+      trades.push(t);
+    }
+    t.qty = round(t.qty + shares, 4);
+    t.amountNative = round(t.qty * p.price);
+    t.amountBase = round(t.qty * p.priceBase);
+    return shares * p.priceBase;
+  };
+  const step = (p) => (opts.wholeShares ? 1 : 1e-4);   // 一次最小可动单位（股）
+
+  /** 在一组内把 need（基准币，正数）分摊成成交：先等比取整，再最大余额补齐。
+   *  side='sell' 时受持仓上限；side='buy' 时受 budget 上限（返回真实成交额）。*/
+  const fill = (members, need, side, budget) => {
+    if (!(need > 0) || !members.length) return 0;
+    const cap = side === "buy" ? Math.min(need, budget) : need;
+    let done = 0;
+    const totVal = sum(members.map((m) => m.valBase));
+    // 第一轮：按现值等比（组内全空则平均分）
+    for (const m of members) {
+      const share = totVal > 0 ? m.valBase / totVal : 1 / members.length;
+      const want = cap * share;
+      const unit = p_unit(m);
+      const n = Math.floor(want / unit) * (opts.wholeShares ? 1 : 1e-4 / 1e-4);
+      const shares = opts.wholeShares ? Math.floor(want / m.priceBase)
+                                      : Math.floor((want / m.priceBase) * 1e4) / 1e4;
+      done += addShares(m, side, shares);
+    }
+    // 第二轮：最大余额补齐——只要还差半股以上，就给「当前离自己应得份额最远」的那个再加一步
+    let guard = 0;
+    while (guard++ < 5000) {
+      const left = cap - done;
+      const cands = members
+        .map((m) => {
+          const traded = tradeOf[m.symbol]?.qty || 0;
+          const unitBase = m.priceBase * step(m);
+          const room = side === "sell" ? m.qty - traded : Infinity;
+          const want = (totVal > 0 ? m.valBase / totVal : 1 / members.length) * cap;
+          const filled = traded * m.priceBase;
+          return { m, unitBase, room, gap: want - filled };
+        })
+        .filter((c) => c.room >= step(c.m) - 1e-9 && c.unitBase <= left + 1e-9 && left > c.unitBase / 2)
+        .sort((a, b) => b.gap - a.gap);
+      if (!cands.length) break;
+      const got = addShares(cands[0].m, side, step(cands[0].m));
+      if (!got) break;
+      done += got;
+    }
+    return done;
+  };
+  const p_unit = (m) => m.priceBase * (opts.wholeShares ? 1 : 1e-4);
+
+  // ① 先卖（只买模式跳过）
+  let proceeds = 0;
+  const sellShort = [];
+  if (opts.mode !== "buyOnly") {
+    for (const g of groupRows) {
+      if (!(g.delta < 0)) continue;
+      const movable = (g._members || []).filter((m) => !m.locked && m.price > 0 && m.qty > 0);
+      const got = fill(movable, -g.delta, "sell", Infinity);
+      proceeds += got;
+      if (-g.delta - got > 0.5) sellShort.push({ group: g.name, missBase: round(-g.delta - got) });
+    }
+  }
+  if (sellShort.length) warnings.push({ code: "sell_capped", detail: sellShort });
+
+  // ② 再买：预算＝现金 + 新投入 + **真实**卖出所得 − 预留
+  const budget0 = Math.max(0, cash + newCash + proceeds - reserve);
+  let spent = 0;
+  const buyWant = sum(groupRows.filter((g) => g.delta > 0).map((g) => g.delta));
+  const scale = buyWant > budget0 && buyWant > 0 ? budget0 / buyWant : 1;
+  for (const g of groupRows) {
+    if (!(g.delta > 0)) continue;
+    const movable = (g._members || []).filter((m) => !m.locked && m.price > 0);
+    spent += fill(movable, g.delta * scale, "buy", Math.max(0, budget0 - spent));
+  }
+  const shortfall = Math.max(0, buyWant - spent);
+  if (buyWant > budget0 + 0.005) warnings.push({ code: "cash_short", need: round(buyWant), budget: round(budget0) });
+
+  // ── 调整后的结果与对账 ──
+  const afterQty = {};
+  usable.forEach((p) => (afterQty[p.symbol] = p.qty));
+  trades.forEach((t) => (afterQty[t.symbol] += t.side === "buy" ? t.qty : -t.qty));
+  const buyBase = sum(trades.filter((t) => t.side === "buy").map((t) => t.amountBase));
+  const sellBase = sum(trades.filter((t) => t.side === "sell").map((t) => t.amountBase));
+  const cashAfter = cash + newCash + sellBase - buyBase;
+
+  const rows = usable.map((p) => {
+    const t = trades.find((x) => x.symbol === p.symbol);
+    const afterVal = afterQty[p.symbol] * p.priceBase;
+    return {
+      symbol: p.symbol,
+      group: groupOf(p.symbol),
+      cur: p.cur,
+      qty: p.qty,
+      price: p.price,
+      valBase: round(p.valBase),
+      nowPct: investable > 0 ? round((p.valBase / investable) * 100, 2) : 0,
+      trade: t || null,
+      afterQty: round(afterQty[p.symbol], 4),
+      afterVal: round(afterVal),
+      afterPct: investable > 0 ? round((afterVal / investable) * 100, 2) : 0,
+      locked: p.locked,
+    };
+  });
+
+  const afterGroup = {};
+  rows.forEach((r) => (afterGroup[r.group] = (afterGroup[r.group] || 0) + r.afterVal));
+  groupRows.forEach((g) => {
+    g.afterVal = round(afterGroup[g.name] || 0);
+    g.afterPct = investable > 0 ? round((g.afterVal / investable) * 100, 2) : 0;
+    g.afterDrift = round(g.afterPct - g.targetPct, 2);
+    delete g._members; // 输出里不带内部引用
+  });
+
+  // 每条自检带一个稳定 code：内核不管翻译（纯函数、给 node 单测用中文 name 断言），
+  // 界面按 code 查双语文案（app 是中英双语的，硬编码中文会在英文模式漏出来）。
+  const checks = [
+    {
+      code: "sell_le_hold",
+      name: "卖出量不超过持仓",
+      ok: trades.filter((t) => t.side === "sell").every((t) => {
+        const p = usable.find((x) => x.symbol === t.symbol);
+        return p && t.qty <= p.qty + 1e-9;
+      }),
+    },
+    { code: "cash_nonneg", name: "调整后现金不为负", ok: cashAfter >= -0.005 },
+    { code: "cash_ge_reserve", name: "调整后现金 ≥ 预留", ok: cashAfter + 1e-6 >= reserve || opts.mode === "buyOnly" },
+    {
+      code: "pct_sum",
+      name: "调整后各组占比合计 = 持仓占比",
+      ok: Math.abs(sum(groupRows.map((g) => g.afterPct)) + (investable > 0 ? (cashAfter - reserve) / investable * 100 : 0) - 100) < 0.6,
+    },
+    { code: "buyonly_no_sell", name: "只买模式没有卖出单", ok: opts.mode !== "buyOnly" || !trades.some((t) => t.side === "sell") },
+    { code: "buy_le_budget", name: "买入 ≤ 真实卖出所得 + 现金 + 新投入 − 预留", ok: buyBase <= sellBase + cash + newCash - reserve + 0.01 },
+  ];
+
+  return {
+    base,
+    fx,
+    wholeShares: opts.wholeShares,
+    wholeSharesAuto: !!opts.wholeSharesAuto,
+    investable: round(investable),
+    posVal: round(posVal),
+    cash: round(cash),
+    newCash: round(newCash),
+    reserve: round(reserve),
+    cashTargetPct: round(cashTargetPct, 2),
+    cashAfter: round(cashAfter),
+    cashAfterPct: investable > 0 ? round(((cashAfter - reserve) / investable) * 100, 2) : 0,
+    buyBase: round(buyBase),
+    sellBase: round(sellBase),
+    shortfall: round(shortfall),
+    groupRows: groupRows.sort((a, b) => b.targetPct - a.targetPct || b.nowVal - a.nowVal),
+    rows: rows.sort((a, b) => b.valBase - a.valBase),
+    trades: trades.sort((a, b) => (a.side === b.side ? b.amountBase - a.amountBase : a.side === "sell" ? -1 : 1)),
+    checks,
+    warnings,
+  };
+}
+
+/* ═══════════════════════════════════════════════════════════
+   调仓（自动算出「要达到目标比例该怎么调」）
+
+   它是**算术计算器**，不是投资建议：只回答「按你自己设的目标比例，需要买卖多少」。
+   不含佣金/点差/税（卖出可能触发资本利得），下单前自己再核一遍。
+
+   算法内核 planRebalance/deriveFx 是先在 node 里用真实持仓 + 边界情形测过 44 条
+   才搬进来的（两个被测试抓出来的真错：先卖后买的顺序、别默认整股）。
+   ═══════════════════════════════════════════════════════════ */
+
+/** 自检文案（内核只给 code，翻译在界面这一层） */
+const RB_CHECK_TXT = {
+  sell_le_hold:    () => T("卖出量不超过持仓", "Sells ≤ shares held"),
+  cash_nonneg:     () => T("调整后现金不为负", "Cash after ≥ 0"),
+  cash_ge_reserve: () => T("调整后现金 ≥ 预留", "Cash after ≥ reserve"),
+  pct_sum:         () => T("调整后各组占比合计 = 持仓占比", "Group weights add up"),
+  buyonly_no_sell: () => T("只买模式没有卖出单", "Buy-only: no sells"),
+  buy_le_budget:   () => T("买入 ≤ 真实卖出所得 + 现金 + 新投入 − 预留",
+                           "Buys ≤ realized proceeds + cash + new cash − reserve"),
+};
+
+const RB_ACCOUNTS = {
+  ibkr: { label: "IBKR", base: "CAD" },
+  ws: { label: "Wealthsimple", base: "CAD" },
+};
+let RB_ACC = "ibkr";
+
+/** 取某账户的持仓与现金（IBKR 用最新快照；WS 用当前持仓表）。base 是该账户报表的基准币。 */
+function rbSource(acc) {
+  if (acc === "ibkr") {
+    const d = DATA.ibkr;
+    const s = d && d.snapshots && d.snapshots[d.snapshots.length - 1];
+    return s
+      ? { positions: s.positions || [], cash: s.cash || 0, nav: s.nav, asof: s.date, base: "CAD" }
+      : { positions: [], cash: 0, nav: null, asof: null, base: "CAD" };
+  }
+  const w = DATA.ws;
+  return w
+    ? { positions: w.positions || [], cash: w.cash || 0, nav: null, asof: (w.snapshots || []).slice(-1)[0]?.date || null, base: "CAD" }
+    : { positions: [], cash: 0, nav: null, asof: null, base: "CAD" };
+}
+
+function rbCfg(acc) {
+  const all = (DATA.rebalance && DATA.rebalance.accounts) || {};
+  const c = all[acc] || {};
+  return {
+    groups: c.groups || {},
+    targets: c.targets || {},
+    fxOverride: c.fxOverride || {},
+    opts: Object.assign({ mode: "both", newCash: 0, reserveCash: 0, bandPct: 1, wholeShares: "auto" }, c.opts || {}),
+    locked: c.locked || [],
+  };
+}
+function rbSetCfg(acc, patch) {
+  DATA.rebalance = DATA.rebalance || { updated_at: "", accounts: {} };
+  DATA.rebalance.accounts = DATA.rebalance.accounts || {};
+  const cur = rbCfg(acc);
+  DATA.rebalance.accounts[acc] = Object.assign(cur, patch);
+  renderRebalance();
+}
+async function rbSave() {
+  if (!CFG.token) { openSettings(); return; }
+  try {
+    DATA.rebalance = DATA.rebalance || { updated_at: "", accounts: {} };
+    DATA.rebalance.updated_at = new Date().toISOString();
+    SHA.rebalance = await ghPut("rebalance.json", DATA.rebalance, SHA.rebalance, "rebalance: 目标比例与参数");
+    toast(T("目标已保存", "Targets saved"));
+    renderRebalance();
+  } catch (e) { toast(T("保存失败: ", "Save failed: ") + e.message, true); }
+}
+
+/** 当前账户的完整计算结果（含汇率来源说明） */
+function rbCompute() {
+  const acc = RB_ACC, src = rbSource(acc), cfg = rbCfg(acc);
+  const der = deriveFx(src.positions, src.cash, src.nav, src.base);
+  const fx = Object.assign({}, der.fx || {}, cfg.fxOverride || {});
+  const positions = src.positions.map((p) => Object.assign({}, p, { locked: cfg.locked.includes(p.symbol) }));
+  // ⚠️ 一个目标都没设时，「目标全 0」在数学上等价于「全部清仓换现金」——
+  // 一打开页面就叫人卖光持仓，这种默认值是危险的。做法：把容忍带设成无穷 ⇒ 整体不动，
+  // 界面只显示现状 + 引导去填目标（而不是清单空了、统计条却仍写「要卖出 4262」那种自相矛盾）。
+  const noTargets = !Object.keys(cfg.targets || {}).some((k) => +cfg.targets[k] > 0);
+  const opts = noTargets ? Object.assign({}, cfg.opts, { bandPct: Infinity }) : cfg.opts;
+  const plan = planRebalance({
+    positions, cash: src.cash, base: src.base, fx,
+    groups: cfg.groups, targets: cfg.targets, opts,
+  });
+  return { acc, src, cfg, der, plan, noTargets };
+}
+
+function renderRebalance() {
+  const host = $("rb-body"); if (!host) return;
+  const { src, cfg, der, plan, noTargets } = rbCompute();
+  const money = (x) => (x == null ? "—" : fmt(Math.round(x * 100) / 100));
+  const pct = (x) => (x == null ? "—" : x.toFixed(2) + "%");
+
+  // ── 账户切换 + 数据来源 ──
+  let h = `<div class="addrow" style="gap:10px">
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+      ${Object.entries(RB_ACCOUNTS).map(([k, v]) =>
+        `<button class="btn ${RB_ACC === k ? "" : "ghost"}" onclick="RB_ACC='${k}';renderRebalance()">${v.label}</button>`).join("")}
+      <span class="meta" style="margin-left:6px">${src.asof ? T("数据日期 ", "As of ") + esc(src.asof) : T("暂无数据", "No data")}
+        · ${src.positions.length} ${T("个持仓", "positions")} · ${T("现金", "cash")} ${money(src.cash)} ${src.base}</span>
+    </div>`;
+
+  // ── 汇率（反推 / 手填）──
+  const foreign = [...new Set(src.positions.map((p) => p.cur).filter((c) => c && c !== src.base))];
+  if (foreign.length) {
+    h += `<div style="font-size:12.5px;line-height:1.8">
+      <b style="color:var(--ink)">${T("汇率", "FX")}</b>：`;
+    if (der.why === "derived") {
+      h += T(
+        `由报表自洽反推 <b style="color:var(--ink)">1 ${der.from} = ${der.rate} ${src.base}</b>
+         <span class="meta">（(NAV − ${src.base}持仓 − 现金) ÷ ${der.from}持仓，与 ${esc(src.asof || "")} 那份报表完全对得上）</span>`,
+        `Derived from the statement: <b style="color:var(--ink)">1 ${der.from} = ${der.rate} ${src.base}</b>`);
+    } else if (der.why === "multi_currency") {
+      h += `<span style="color:var(--amber)">${T("有多种外币，无法只用一个未知数反推，请手填", "Multiple foreign currencies — enter rates manually")}</span>`;
+    } else {
+      h += `<span style="color:var(--amber)">${T("反推不出（缺 NAV 或现金）", "Cannot derive (missing NAV/cash)")}</span>`;
+    }
+    h += foreign.map((c) =>
+      `<label style="margin-left:10px">${T("手填", "Override")} ${esc(c)}→${src.base}
+        <input class="inp" style="width:90px" type="number" step="0.0001" value="${cfg.fxOverride[c] ?? ""}"
+          placeholder="${der.fx && der.fx[c] ? der.fx[c] : ""}"
+          onchange="rbSetCfg(RB_ACC,{fxOverride:Object.assign({},rbCfg(RB_ACC).fxOverride,{'${esc(c)}':this.value?+this.value:undefined})})"></label>`).join("");
+    h += `</div>`;
+  }
+
+  // ── 参数 ──
+  const o = cfg.opts;
+  const setOpt = (k) => `onchange="rbSetCfg(RB_ACC,{opts:Object.assign({},rbCfg(RB_ACC).opts,{${k}:this.type==='checkbox'?this.checked:(this.value===''?0:(isNaN(+this.value)?this.value:+this.value))})})"`;
+  h += `<div class="addrow" style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:12.5px">
+    <label>${T("模式", "Mode")}
+      <select class="inp" ${setOpt("mode")}>
+        <option value="both" ${o.mode === "both" ? "selected" : ""}>${T("买卖都行", "Buy & sell")}</option>
+        <option value="buyOnly" ${o.mode === "buyOnly" ? "selected" : ""}>${T("只买不卖", "Buy only")}</option>
+      </select></label>
+    <label>${T("新投入", "New cash")} <input class="inp" style="width:100px" type="number" value="${o.newCash || 0}" ${setOpt("newCash")}></label>
+    <label>${T("预留现金", "Keep cash")} <input class="inp" style="width:100px" type="number" value="${o.reserveCash || 0}" ${setOpt("reserveCash")}></label>
+    <label>${T("容忍带", "Band")} <input class="inp" style="width:70px" type="number" step="0.1" value="${o.bandPct}" ${setOpt("bandPct")}>%</label>
+    <label>${T("股数", "Shares")}
+      <select class="inp" ${setOpt("wholeShares")}>
+        <option value="auto" ${o.wholeShares === "auto" ? "selected" : ""}>${T("自动判断", "Auto")}</option>
+        <option value="false" ${o.wholeShares === false || o.wholeShares === "false" ? "selected" : ""}>${T("允许碎股", "Fractional")}</option>
+        <option value="true" ${o.wholeShares === true || o.wholeShares === "true" ? "selected" : ""}>${T("只整股", "Whole only")}</option>
+      </select>
+      <span class="meta">${plan.wholeSharesAuto ? T("自动判为", "auto → ") + (plan.wholeShares ? T("只整股", "whole") : T("允许碎股", "fractional")) : ""}</span></label>
+    <button class="btn ghost" onclick="rbSave()">${T("保存目标", "Save targets")}</button>
+  </div>`;
+
+  // ── 目标比例编辑 ──
+  const allGroups = [...new Set([...Object.keys(cfg.targets), ...src.positions.map((p) => cfg.groups[p.symbol] || p.symbol)])];
+  const tSum = allGroups.reduce((s, g) => s + (+cfg.targets[g] || 0), 0);
+  h += `<div class="sectionhead"><h2 style="font-size:15px">${T("目标比例", "Targets")}</h2>
+    <div class="meta">${T("合计", "Sum")} <b style="color:${tSum > 100.01 ? "var(--red)" : "var(--ink)"}">${tSum.toFixed(2)}%</b>
+      · ${T("没分配的部分＝现金目标", "unallocated = cash target")} <b style="color:var(--ink)">${plan.cashTargetPct}%</b></div></div>
+  <div class="tablewrap"><table><tr>
+    <th>${T("组", "Group")}</th><th>${T("成员", "Members")}</th><th>${T("目标 %", "Target %")}</th>
+    <th>${T("现在", "Now")}<span class="meta"> ${esc(src.base)}</span></th><th>${T("差额", "Drift")}</th><th>${T("调整后", "After")}</th></tr>` +
+    plan.groupRows.map((g) => {
+      const mem = src.positions.filter((p) => (cfg.groups[p.symbol] || p.symbol) === g.name).map((p) => p.symbol);
+      return `<tr>
+        <td style="font-family:var(--mono)">${esc(g.name)}</td>
+        <td class="meta" style="font-size:11.5px">${mem.map(esc).join(" ") || `<span style="color:var(--amber)">${T("无持仓", "none")}</span>`}</td>
+        <td class="num"><input class="inp" style="width:74px" type="number" step="0.1" value="${cfg.targets[g.name] ?? ""}"
+          onchange="rbSetCfg(RB_ACC,{targets:Object.assign({},rbCfg(RB_ACC).targets,{'${esc(g.name)}':this.value===''?undefined:+this.value})})"></td>
+        <td class="num">${pct(g.nowPct)}<span class="meta"> ${money(g.nowVal)}</span></td>
+        <td class="num" style="color:${g.inBand ? "var(--muted)" : g.delta > 0 ? "var(--green)" : "var(--red)"}">
+          ${g.inBand ? T("带内不动", "in band") : (g.delta > 0 ? "+" : "") + money(g.delta)}</td>
+        <td class="num"><b style="color:var(--ink)">${pct(g.afterPct)}</b>
+          <span class="meta"> ${g.targetPct ? (Math.abs(g.afterDrift) < 0.05 ? "✓" : (g.afterDrift > 0 ? "+" : "") + g.afterDrift + "pt") : ""}</span></td></tr>`;
+    }).join("") + `</table></div>
+  <div class="addrow"><label style="font-size:12.5px">${T("标的归组（留空=自成一组）", "Assign symbol → group")}
+    <select class="inp" id="rb-sym"><option value="">${T("选标的", "symbol")}</option>
+      ${src.positions.map((p) => `<option value="${esc(p.symbol)}">${esc(p.symbol)} → ${esc(cfg.groups[p.symbol] || p.symbol)}</option>`).join("")}</select>
+    <input class="inp" id="rb-grp" placeholder="${T("组名", "group name")}" style="width:140px">
+    <button class="btn ghost" onclick="rbAssign()">${T("归组", "Assign")}</button>
+    <span class="meta">${T("现金目标＝100 − 目标合计；锁定的持仓不会被卖", "Cash target = 100 − sum; locked positions are never sold")}</span></label></div>`;
+
+  // ── 结果：交易清单 ──
+  h += `<div class="stats">
+    <div class="stat"><div class="k">${T("可投资总额", "Investable")}</div><div class="v" style="font-size:19px">${money(plan.investable)}</div></div>
+    <div class="stat"><div class="k">${T("要买入", "To buy")}</div><div class="v" style="font-size:19px;color:var(--green)">${money(plan.buyBase)}</div></div>
+    <div class="stat"><div class="k">${T("要卖出", "To sell")}</div><div class="v" style="font-size:19px;color:var(--red)">${money(plan.sellBase)}</div></div>
+    <div class="stat"><div class="k">${T("调整后现金", "Cash after")}</div><div class="v" style="font-size:19px">${money(plan.cashAfter)}<span class="meta"> · ${plan.cashAfterPct}%</span></div></div>
+    ${plan.shortfall > 0 ? `<div class="stat"><div class="k">${T("买不满（缺口）", "Shortfall")}</div><div class="v" style="font-size:19px;color:var(--amber)">${money(plan.shortfall)}</div></div>` : ""}
+  </div>`;
+
+  h += `<div class="sectionhead"><h2 style="font-size:15px">${T("调仓清单", "Trade list")}</h2>
+    <div class="meta">${T("不含佣金/点差/税；卖出可能产生资本利得", "Excludes commissions, spread and tax; selling may realize capital gains")}</div></div>`;
+  if (!plan.trades.length) {
+    h += `<div class="addrow meta">${noTargets
+      ? T("还没设目标比例——在上面的「目标 %」里填几个数（不用填满 100，剩下的算现金目标），清单就会出来。",
+          "No targets yet — fill in a few Target % values above (they need not sum to 100; the rest is your cash target).")
+      : T("按当前目标与容忍带，不需要调整。", "Nothing to do under the current targets and band.")}</div>`;
+  } else {
+    h += `<div class="tablewrap"><table><tr>
+      <th>${T("方向", "Side")}</th><th>${T("代码", "Symbol")}</th><th>${T("股数", "Qty")}</th><th>${T("价格", "Price")}</th>
+      <th>${T("金额(原币)", "Amount")}</th><th>${T("金额(", "Amount(")}${src.base})</th></tr>` +
+      plan.trades.map((t) => `<tr>
+        <td style="color:${t.side === "buy" ? "var(--green)" : "var(--red)"}">${t.side === "buy" ? T("买入", "Buy") : T("卖出", "Sell")}</td>
+        <td style="font-family:var(--mono)">${esc(t.symbol)}</td>
+        <td class="num">${t.qty}</td><td class="num">${fmt(t.price)} ${esc(t.cur)}</td>
+        <td class="num">${fmt(t.amountNative)} ${esc(t.cur)}</td><td class="num">${money(t.amountBase)}</td></tr>`).join("") +
+      `</table></div>`;
+  }
+
+  // ── 对账与警告（算错钱比算不出更糟，所以摊开给人看）──
+  h += `<div class="addrow" style="font-size:12.5px;line-height:1.9">
+    <b style="color:var(--ink)">${T("自检", "Checks")}</b>${T("：", ": ")}` +
+    plan.checks.map((c) => `<span style="margin-right:12px;color:${c.ok ? "var(--green)" : "var(--red)"}">${c.ok ? "✓" : "✗"} ${esc(RB_CHECK_TXT[c.code] ? RB_CHECK_TXT[c.code]() : c.name)}</span>`).join("") + `<br>`;
+  const wmsg = {
+    no_fx: (w) => T(`${w.symbol} 是 ${w.cur}，缺汇率 → 已排除出计算（绝不按 1:1 硬算）`, `${w.symbol} in ${w.cur}: no FX rate → excluded`),
+    no_price: (w) => T(`${w.symbol} 没有价格 → 无法计算它`, `${w.symbol}: no price`),
+    target_over_100: (w) => T(`目标合计 ${w.sum}% 超过 100%`, `Targets sum to ${w.sum}%`),
+    group_locked: (w) => T(`「${w.group}」的成员都被锁定，动不了`, `All members of ${w.group} are locked`),
+    group_no_symbol: (w) => T(`「${w.group}」还没有任何标的，买不进去`, `${w.group} has no symbol yet`),
+    sell_capped: (w) => T(`受持仓/整股限制，${w.detail.map((x) => x.group + " 少卖 " + fmt(x.missBase)).join("；")}`, `Sell capped: ${w.detail.map((x) => x.group).join(", ")}`),
+    cash_short: (w) => T(`想买 ${fmt(w.need)} 但只有 ${fmt(w.budget)} 可用 → 已按比例缩减`, `Wanted ${fmt(w.need)}, budget ${fmt(w.budget)} → scaled down`),
+  };
+  if (plan.warnings.length) {
+    h += plan.warnings.map((w) => `<div style="color:var(--amber)">⚠️ ${esc((wmsg[w.code] || ((x) => x.code))(w))}</div>`).join("");
+  }
+  h += `<div class="meta" style="margin-top:6px">${T(
+    "这是算术计算器，不是投资建议——它只回答「按你自己设的目标比例该买卖多少」，不判断目标合不合理。",
+    "This is a calculator, not advice: it only answers how much to trade to hit the targets you set.")}</div></div>`;
+
+  host.innerHTML = h;
+}
+
+function rbAssign() {
+  const sym = $("rb-sym").value, grp = $("rb-grp").value.trim();
+  if (!sym) { toast(T("先选一个标的", "Pick a symbol"), true); return; }
+  const groups = Object.assign({}, rbCfg(RB_ACC).groups);
+  if (grp) groups[sym] = grp; else delete groups[sym];
+  rbSetCfg(RB_ACC, { groups });
+  $("rb-grp").value = "";
+}
+
+</script>
+</body>
+</html>
