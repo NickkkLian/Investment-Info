@@ -2301,6 +2301,33 @@ function rbAssign() {
   $("rb-grp").value = "";
 }
 
+
+/* ===== 可点击元素键盘可达性补丁（toolbox/design-vault 模式 #26）=====
+   为什么用运行时升级而不是改标记：这些可点击元素是模板字符串在 renderXxx 里
+   动态生成的，静态改 HTML 会漏掉全部动态节点。MutationObserver 两者都覆盖。 */
+(function(){
+  var SEL = '[onclick]:not(button):not(a):not(input):not([role="button"])';
+  function upgrade(root){
+    (root || document).querySelectorAll(SEL).forEach(function(el){
+      el.setAttribute('role','button');
+      if(!el.hasAttribute('tabindex')) el.setAttribute('tabindex','0');
+    });
+  }
+  document.addEventListener('keydown', function(e){
+    if(e.key !== 'Enter' && e.key !== ' ') return;
+    var t = e.target;
+    if(!t || !t.closest) return;
+    var el = t.closest('[role="button"][onclick]');
+    if(!el || el.tagName === 'BUTTON' || el.tagName === 'A') return;
+    e.preventDefault();          // 空格默认会滚动页面
+    el.click();
+  });
+  if(document.body){
+    upgrade();
+    new MutationObserver(function(){ upgrade(); })
+      .observe(document.body, {childList:true, subtree:true});
+  }
+})();
 </script>
 </body>
 </html>
