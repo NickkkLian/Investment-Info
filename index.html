@@ -2302,30 +2302,56 @@ function rbAssign() {
 }
 
 
-/* ===== 可点击元素键盘可达性补丁（toolbox/design-vault 模式 #26）=====
-   为什么用运行时升级而不是改标记：这些可点击元素是模板字符串在 renderXxx 里
-   动态生成的，静态改 HTML 会漏掉全部动态节点。MutationObserver 两者都覆盖。 */
+/* ===== 可点击元素键盘可达性补丁 v2（toolbox/design-vault 模式 #26）=====
+   为什么用运行时升级而不是改标记：这些元素多是模板字符串动态生成的，静态改 HTML 会漏掉动态节点。
+   ⚠️ v2 修了 v1 的误伤（2026-08-05 实测：123 处里 26 处被 v1 错误升级）——
+   并不是所有 [onclick] 都该变成按钮：
+     · 纯 stopPropagation 的守卫：点了什么都不做，给它 role/tabindex 是造假；
+     · 全屏遮罩层：正确做法是 Esc 关闭，给它 tabindex 会造出一个巨大的假停靠点。 */
 (function(){
   var SEL = '[onclick]:not(button):not(a):not(input):not([role="button"])';
+
+  function handlerOf(el){ return (el.getAttribute('onclick') || '').replace(/\s+/g,''); }
+
+  function isGuard(el){                 // 只阻止冒泡，不做任何事
+    var h = handlerOf(el);
+    return /stopPropagation\(\)/.test(h) && h.replace(/^(event|e)\./,'').length <= 24;
+  }
+
+  function isOverlay(el){               // 全屏固定遮罩（按视口实测，不靠类名猜）
+    var cs = window.getComputedStyle(el);
+    if(cs.position !== 'fixed' && cs.position !== 'absolute') return false;
+    var r = el.getBoundingClientRect();
+    return r.width >= window.innerWidth * 0.9 && r.height >= window.innerHeight * 0.9;
+  }
+
   function upgrade(root){
     (root || document).querySelectorAll(SEL).forEach(function(el){
+      if(isGuard(el)) { el.setAttribute('data-a11y','guard'); return; }
+      if(isOverlay(el)){ el.setAttribute('data-a11y','overlay'); return; }   // 交给 Esc
       el.setAttribute('role','button');
       if(!el.hasAttribute('tabindex')) el.setAttribute('tabindex','0');
     });
   }
+
   document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape'){                       // 遮罩层：Esc 关闭
+      var ov = document.querySelector('[data-a11y="overlay"]');
+      if(ov){ e.preventDefault(); ov.click(); }
+      return;
+    }
     if(e.key !== 'Enter' && e.key !== ' ') return;
     var t = e.target;
     if(!t || !t.closest) return;
     var el = t.closest('[role="button"][onclick]');
     if(!el || el.tagName === 'BUTTON' || el.tagName === 'A') return;
-    e.preventDefault();          // 空格默认会滚动页面
+    e.preventDefault();                           // 空格默认会滚动页面
     el.click();
   });
+
   if(document.body){
     upgrade();
-    new MutationObserver(function(){ upgrade(); })
-      .observe(document.body, {childList:true, subtree:true});
+    new MutationObserver(function(){ upgrade(); }).observe(document.body, {childList:true, subtree:true});
   }
 })();
 </script>
